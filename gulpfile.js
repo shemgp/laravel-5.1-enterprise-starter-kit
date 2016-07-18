@@ -21,11 +21,12 @@ elixir(function(mix) {
         'app.css',
     ], null, 'public/css');
 
-    // Compile our SASS file to CSS.
+    // Compile our Coffee file to JS.
     mix.coffee('app.coffee');
     // Combine the various JS into one.
     mix.scripts([
        //'vendor.js',
+        'ajax-csrf.js',
         'modal.js',
         'app.js',
     ], null, 'public/js');

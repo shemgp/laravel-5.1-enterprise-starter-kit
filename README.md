@@ -21,9 +21,16 @@ Directory (AD) authentication and the dynamic authorization module. But wait the
     - [First login and test](#first-login-and-test)
 - [Configuration](#configuration)
     - [Authentication & Authorization](#authentication--authorization)
+    - [LDAP/AD authentication](#ldapad-authentication)
+    - [Menu system](#menu-system)
     - [Walled garden](#walled-garden)
     - [Themes](#themes)
     - [Audit log](#audit-log)
+    - [jqGrid datatables & reports](#jqgrid-datatables--reports)
+    - [Rapyd demo](#rapyd-demo)
+    - [Modules](#modules)
+    - [LERN](#lern)
+    - [Context sensitive help](#context-sensitive-help)
 - [Deploying to Production](#deploying-to-production)
     - [Combine and minimize](#combine-and-minimize)
 - [Troubleshooting](#troubleshooting)
@@ -42,6 +49,7 @@ Directory (AD) authentication and the dynamic authorization module. But wait the
     * 403: Forbidden access.
     * 404: Page not found.
     * 500: Internal server error.
+* Context sensitive help.
 * Authentication & Authorization.
     * User authentication using Laravel's default model and middleware.
     * Role based authorization using [zizaco/entrust](https://github.com/zizaco/entrust).
@@ -63,13 +71,17 @@ Directory (AD) authentication and the dynamic authorization module. But wait the
 * Modules with [l51esk-modules](https://github.com/sroutier/l51esk-modules)
 * Laravel [Repositories](https://github.com/Bosnadev/Repositories).
 * Flash notifications using [laracasts/flash](https://github.com/laracasts/flash).
-* CRUD widgets, datatable, grids, forms with [rapyd-laravel](https://github.com/zofe/rapyd-laravel)
+* Advanced datatables with [jqGrid](http://www.trirand.com/blog/) and [mgallegos/laravel-jqgrid](https://github.com/mgallegos/laravel-jqgrid).
+* CRUD widgets, datatable, grids, forms with [rapyd-laravel](https://github.com/zofe/rapyd-laravel).
+* User profile with Gravatar integration using [creativeorange/gravatar](https://github.com/creativeorange/gravatar).
 * Internationalization (i18n).
 * Gulp and Elixir ready to compile and minimize Sass & CoffeeScript.
+* Laravel Exception Recorder and Notifier using [LERN](https://github.com/tylercd100/lern) with admin pages to view logged errors and link to user.
 * Bootstrap v3.3.4.
 * Font-awesome v4.4.0.
 * Ionicons v2.0.1.
 * jQuery v2.1.4.
+* jQuery UI v1.11.4, two themes included: Base and Trontastic.
 * Select2 v4.0.0
 * Select2 Bootstrap Theme v0.1.0-beta.4
 * Development tools
@@ -82,13 +94,11 @@ Directory (AD) authentication and the dynamic authorization module. But wait the
 ## Roadmap
 List of future feature and items that are still have to be completed, in no particular order:
 
-* Gravatar integration.
 * Implement soft-delete for Users, Roles, Permissions and maybe even Routes.
 * Persistent notifications.
 * Single sign-on for IIS and Apache.
 * Favicon (one per theme?).
 * Settings with precedence, Application vs User settings and DB vs .env file.
-* Sortable tables.
 * Datepicker for date fields.
 * Chart & graph engine.
 * Add comments in .env file.
@@ -233,9 +243,20 @@ npm install
 
 #### Create your *.env* file
 Create a *.env* file from the *.env.example* supplied.
+
+For a Development environment use:
 ```
-cp .env.example .env
+cp .env.example-dev .env
 ```
+
+For a other environments, such as QA and Production use:
+```
+cp .env.example-qa .env
+```
+
+**_NOTE:_** Do not use the environment file for the development environment in any other environment as this will cause a lot of failures in the bootstrap aand kernel part of the application due to some dependencies being dynamically injected for the development environment only.
+
+### Basic configuration
 
 #### Generate application key
 Generate the unique application key:
@@ -398,7 +419,7 @@ access to external resources when specified with the *URL* field.
 To enable the optional walled garden mode simply set the *WALLED_GARDEN* variable to *true* in the *.env* file as shown 
 below:
 ````
-WALLED_GARDEN=true
+WALLED_GARDEN_ENABLED=true
 ````
 By default the walled garden mode is set to off or false. When enabled all guest or un-authenticated users will be 
 redirected to the login page.
@@ -490,6 +511,23 @@ Additionally the *data_parser* function can add to the *data* array an entry wit
 a partial blade file that will be responsible for rendering the parsed data of the audit log entry. If no *show_partial* is 
 specified the default behaviour is to use *var_dump()* to simply dump the value on the page.
 
+### jqGrid datatables & reports.
+Advanced datatables and reports can be easily created using [jqGrid](http://www.trirand.com/blog/) and 
+[mgallegos/laravel-jqgrid](https://github.com/mgallegos/laravel-jqgrid). 
+
+In a development environment, 3 reports
+are available as sample: 
+
+* A simple user list.
+* A list of routes with their associated permission, using a join.
+* A list of permissions and roles for each user, grouped by user and roles. This is implemented by first creating a view
+ in the database as it would have been too complicated for Laravel Query Builder to handle.
+ 
+**_NOTE:_** The view is created in a migration, but will only be created (and dropped) in the development environment.
+
+**_NOTE:_** All jqGRids reports are using the base jQuery UI, except the routes report that uses the trontastic theme, 
+to show how easy it is to change jQuery UI theme.
+
 ### Rapyd demo
 To enable the demo mini sub-site that comes with [rapyd-laravel](https://github.com/zofe/rapyd-laravel) uncomment the 
 following line at the end of the file *app/Http/rapyd.php*:
@@ -506,6 +544,39 @@ to original package notes.
 Small features can be grouped into modules and managed, enabled and upgraded, without impacting the entire site.
 Refer to the documentation on the [l51esk-modules](https://github.com/sroutier/l51esk-modules) and look at a 
 concrete example [Module Demo](https://github.com/sroutier/l51esk-modules-demo-1) for more details.  
+
+### LERN
+To enable LERN (Laravel Exception Recorder and Notifier) set the configuration option as show below:
+```
+LERN_ENABLED=false
+```
+Once enabled, LERN can record exceptions in the table ```lern_exceptions``` as well as email them if your mail system is properlly
+configured. A few more options are available to tweak the behaviour of LERN, refer to the ```lern.php``` configuration page and the [project home page](https://github.com/tylercd100/lern).
+All recorded exceptions can be seen in the ``` Error ``` page from the ```Admin``` menu. Individual exception also can be reviewed and should the need arise, old entries can be deleted with the purge button. The setting ```ERRORS_PURGE_RETENTION``` let you configure how 
+far back, in days, exceptions are kept when purging. By default any exception older than ```30``` days is deleted.
+
+### Context sensitive help
+
+Context sensitive help can be enabled by setting the configuration option ```APP_CONTEXT_HELP_AREA``` to true. When context sensitive help is enabled, a question mark (?) appears in the top-right area of the Web application. The question mark is either dimmed and disabled, or lit and enabled dependint on whether context sensitive help is available or not. For example on the home page the question mark will be dimmed and disabled but on the User edit page it will be lit and enabled. When clicked on, a small box will appear with the content of the context help inside. The help box can be dismissed by clicking anywhere outside the box.
+
+To create a new context sensitive help box, simply create a blade file under the ```resources/themes/default/views/context_help/``` folder followed by a struture representing the name of your route. For example the user edit page is accessed by the ```admin.users.edit``` route so create a blade page named ```edit.blade.php``` under ```resources/themes/default/views/context_help/admin/users/``` and it will automatically be loaded and shown when a user click on the question mark (?) icon.
+
+Module can also create context sensitive help by following the same principle but they must also set the __context__ parameter when they call the parent __constructor__, here is how the (Active Directory Inspector)[https://github.com/sroutier/L51ESK-Module_ActiveDirectoryInspector] module sets it, notice the 3rd parameter in the ```parent::__construct()``` call:
+```
+...
+    /**
+     * Custom constructor to get a handle on the Application instance.
+     * @param Application $app
+     */
+    public function __construct(Application $app, Audit $audit)
+    {
+        parent::__construct($app, $audit, "activedirectoryinspector");
+        $this->app = $app;
+        $this->ldapConfig = $this->app['config']['activedirectoryinspector'];
+    }
+...
+```
+Once the context set, the context sensitive help for the __home__ page is automatically loaded from ```app/Modules/ActiveDirectoryInspector/Resources/views/context_help/activedirectoryinspector/home.blade.php```This path is generated using this formula: ```app/Modules/<module namespace>/Resources/views/context_help/<route name>/<last part of route name>.blade.php```
 
 
 ## Deploying to production

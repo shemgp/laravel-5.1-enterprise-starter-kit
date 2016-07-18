@@ -187,6 +187,16 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Context help area
+    |--------------------------------------------------------------------------
+    |
+    | Boolean flag that shows the context help area if present, defaults to true.
+    |
+    */
+    'context_help_area' => env('APP_CONTEXT_HELP_AREA', true),
+
+    /*
+    |--------------------------------------------------------------------------
     | Notification area
     |--------------------------------------------------------------------------
     |
@@ -224,6 +234,16 @@ return [
     |
     */
     'right_sidebar' => env('APP_RIGHT_SIDEBAR', true),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Email notifications
+    |--------------------------------------------------------------------------
+    |
+    | Boolean flag that enables email notifications, defaults to false.
+    |
+    */
+    'email_notifications' => env('APP_EMAIL_NOTIFICATIONS_ENABLED', false),
 
     /*
     |--------------------------------------------------------------------------
@@ -283,6 +303,9 @@ return [
         Zofe\Rapyd\RapydServiceProvider::class,
         Baum\Providers\BaumServiceProvider::class,
         Sroutier\L51ESKModules\ModulesServiceProvider::class,
+        Mgallegos\LaravelJqgrid\LaravelJqgridServiceProvider::class,
+        Creativeorange\Gravatar\GravatarServiceProvider::class,
+        Tylercd100\LERN\LERNServiceProvider::class,
 
     ],
 
@@ -340,6 +363,11 @@ return [
         'Entrust'     => Zizaco\Entrust\EntrustFacade::class,
         'MenuBuilder' => App\Facades\MenuBuilderFacade::class,
         'Module'      => Sroutier\L51ESKModules\Facades\Module::class,
+        'GridRender'  => Mgallegos\LaravelJqgrid\Facades\GridRender::class,
+        'GridEncoder' => Mgallegos\LaravelJqgrid\Facades\GridEncoder::class,
+        'Gravatar'    => Creativeorange\Gravatar\Facades\Gravatar::class,
+        'LERN'        => Tylercd100\LERN\Facades\LERN::class,
+
     ],
 
 ];

@@ -102,10 +102,24 @@ class ProductionSeeder extends Seeder
             'description'   => 'Allows a user to purge old items from the audit log.',
             'enabled'       => true,
         ]);
+        // Create permission to manage the site settings
         $permAdminSettings = Permission::create([
             'name'          => 'admin-settings',
             'display_name'  => 'Administer site settings',
             'description'   => 'Allows a user to change site settings.',
+            'enabled'       => true,
+        ]);
+        // Create a few permissions for the admin|errors section
+        $permErrorLogView = Permission::create([
+            'name'          => 'error-log-view',
+            'display_name'  => 'View error log',
+            'description'   => 'Allows a user to view the error log.',
+            'enabled'       => true,
+        ]);
+        $permErrorPurge = Permission::create([
+            'name'          => 'error-log-purge',
+            'display_name'  => 'Purge error log',
+            'description'   => 'Allows a user to purge old items from the error log.',
             'enabled'       => true,
         ]);
 
@@ -124,10 +138,16 @@ class ProductionSeeder extends Seeder
         $routeFaust = Route::where('name', 'faust')->get()->first();
         $routeFaust->permission()->associate($permOpenToAll);
         $routeFaust->save();
-        // Associate basic-authenticated permission to the dashboard route
+        // Associate basic-authenticated permission to some routes
         $routeDashboard = Route::where('name', 'dashboard')->get()->first();
         $routeDashboard->permission()->associate($permBasicAuthenticated);
         $routeDashboard->save();
+        $routeUserProfile = Route::where('name', 'user.profile')->get()->first();
+        $routeUserProfile->permission()->associate($permBasicAuthenticated);
+        $routeUserProfile->save();
+        $routeUserProfilePatch = Route::where('name', 'user.profile.patch')->get()->first();
+        $routeUserProfilePatch->permission()->associate($permBasicAuthenticated);
+        $routeUserProfilePatch->save();
         // Associate the audit-log permissions
         $routeAuditView = Route::where('name', 'admin.audit.index')->get()->first();
         $routeAuditView->permission()->associate($permAuditLogView);
@@ -187,6 +207,16 @@ class ProductionSeeder extends Seeder
         $routeAdminSettings = Route::where('name', 'admin.settings.index')->get()->first();
         $routeAdminSettings->permission()->associate($permAdminSettings);
         $routeAdminSettings->save();
+        // Associate the error-log permissions
+        $routeErrorView = Route::where('name', 'admin.errors.index')->get()->first();
+        $routeErrorView->permission()->associate($permErrorLogView);
+        $routeErrorView->save();
+        $routeErrorShow = Route::where('name', 'admin.errors.show')->get()->first();
+        $routeErrorShow->permission()->associate($permErrorLogView);
+        $routeErrorShow->save();
+        $routeErrorPurge = Route::where('name', 'admin.errors.purge')->get()->first();
+        $routeErrorPurge->permission()->associate($permErrorPurge);
+        $routeErrorPurge->save();
 
 
         ////////////////////////////////////
@@ -196,7 +226,7 @@ class ProductionSeeder extends Seeder
             "display_name"  => "Administrators",
             "description"   => "Administrators have no restrictions",
             "enabled"       => true
-            ]);
+        ]);
         // Create role: users
         // Assign permission basic-authenticated
         $roleUsers = Role::create([
@@ -204,7 +234,7 @@ class ProductionSeeder extends Seeder
             "display_name"  => "Users",
             "description"   => "All authenticated users",
             "enabled"       => true
-            ]);
+        ]);
         $roleUsers->perms()->attach($permBasicAuthenticated->id);
         // Create role: menu-manager
         // Assign permission manage-menus
@@ -269,6 +299,24 @@ class ProductionSeeder extends Seeder
             "enabled"       => true
         ]);
         $roleAuditPurgers->perms()->attach($permAuditPurge->id);
+        // Create role: error-viewers
+        // Assign permission: error-log-view
+        $roleErrorViewers = Role::create([
+            "name"          => "error-viewers",
+            "display_name"  => "Error viewers",
+            "description"   => "Users allowed to view the error log.",
+            "enabled"       => true
+        ]);
+        $roleErrorViewers->perms()->attach($permErrorLogView->id);
+        // Create role: error-purgers
+        // Assign permission: error-log-purge
+        $roleErrorPurgers = Role::create([
+            "name"          => "error-purgers",
+            "display_name"  => "Error purgers",
+            "description"   => "Users allowed to purge old items from the error log.",
+            "enabled"       => true
+        ]);
+        $roleErrorPurgers->perms()->attach($permErrorPurge->id);
 
 
         ////////////////////////////////////
@@ -283,7 +331,7 @@ class ProductionSeeder extends Seeder
             "password"      => "Password1",
             "auth_type"     => "internal",
             "enabled"       => true
-            ]);
+        ]);
         $userRoot->roles()->attach($roleAdmins->id);
 
 
@@ -359,11 +407,24 @@ class ProductionSeeder extends Seeder
             'route_id'      => $routeAuditView->id,
             'permission_id' => null,                // Get permission from route.
         ]);
+        // Create Error sub-menu
+        $menuError = Menu::create([
+            'name'          => 'error',
+            'label'         => 'Error',
+            'position'      => 1,
+            'icon'          => 'fa fa-binoculars',
+            'separator'     => false,
+            'url'           => null,                // Get URL from route.
+            'enabled'       => true,
+            'parent_id'     => $menuAdmin->id,      // Parent is admin.
+            'route_id'      => $routeErrorView->id,
+            'permission_id' => null,                // Get permission from route.
+        ]);
         // Create Modules sub-menu
         $menuModules = Menu::create([
             'name'          => 'modules',
             'label'         => 'Modules',
-            'position'      => 1,
+            'position'      => 2,
             'icon'          => 'fa fa-puzzle-piece',
             'separator'     => false,
             'url'           => null,                // Get URL from route.
@@ -376,7 +437,7 @@ class ProductionSeeder extends Seeder
         $menuSecurity = Menu::create([
             'name'          => 'security',
             'label'         => 'Security',
-            'position'      => 2,
+            'position'      => 3,
             'icon'          => 'fa fa-user-secret fa-colour-red',
             'separator'     => false,
             'url'           => null,                // No url.
@@ -467,7 +528,7 @@ class ProductionSeeder extends Seeder
         $menuSettings = Menu::create([
             'name'          => 'setting',
             'label'         => 'Settings',
-            'position'      => 3,
+            'position'      => 4,
             'icon'          => 'fa fa-cogs',
             'separator'     => false,
             'url'           => null,                // Get URL from route.

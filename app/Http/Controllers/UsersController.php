@@ -12,9 +12,12 @@ use App\Repositories\UserRepository as User;
 use App\Repositories\PermissionRepository as Permission;
 use App\Repositories\RoleRepository as Role;
 use App\Repositories\AuditRepository as Audit;
+use Illuminate\Contracts\Foundation\Application;
 use Flash;
 use Auth;
 use DB;
+use Mail;
+use Config;
 
 class UsersController extends Controller {
 
@@ -34,20 +37,15 @@ class UsersController extends Controller {
     protected $perm;
 
     /**
-     * @var Audit
-     */
-    protected $audit;
-
-    /**
      * @param User $user
      * @param Role $role
      */
-    public function __construct(User $user, Role $role, Permission $perm, Audit $audit)
+    public function __construct(Application $app, Audit $audit, User $user, Role $role, Permission $perm)
     {
+        parent::__construct($app, $audit);
         $this->user  = $user;
         $this->role  = $role;
         $this->perm  = $perm;
-        $this->audit = $audit;
     }
 
     /**
@@ -107,11 +105,7 @@ class UsersController extends Controller {
      */
     public function store(CreateUserRequest $request)
     {
-        $this->validate($request, array(    'username'          => 'required|unique:users',
-                                            'email'             => 'required|unique:users',
-                                            'first_name'        => 'required',
-                                            'last_name'         => 'required',
-        ));
+        $this->validate($request, \app\User::getCreateValidationRules());
 
         $attributes = $request->all();
 
@@ -264,28 +258,30 @@ class UsersController extends Controller {
      */
     public function update(UpdateUserRequest $request, $id)
     {
-        $this->validate($request, array(    'username'          => 'required|unique:users,username,' . $id,
-                                            'email'             => 'required|unique:users,email,' . $id,
-                                            'first_name'        => 'required',
-                                            'last_name'         => 'required',
-        ));
+        $this->validate($request, \app\User::getUpdateValidationRules($id));
 
         $user = $this->user->find($id);
 
         // Get all attribute from the request.
         $attributes = $request->all();
 
+        // Set passwordChanged flag
+        $passwordChanged = false;
+
         // Fix #17 as per @sloan58
         // Check if the password was submitted and has changed.
         if(!\Hash::check($attributes['password'],$user->password) && $attributes['password'] != '')
         {
-            // Password was changed, do nothing we are good.
+            // Password was changed, set flag for later.
+            $passwordChanged = true;
         }
         else
         {
             // Password was not changed or was not submitted, delete attribute from array to prevent it
             // from being set to blank.
             unset($attributes['password']);
+            // Set flag just to be sure
+            $passwordChanged = false;
         }
 
         // Get a copy of the attributes that we will modify to save for a replay.
@@ -316,6 +312,9 @@ class UsersController extends Controller {
         }
 
         $user->update($attributes);
+        if ($passwordChanged) {
+            $this->emailPasswordChange($user);
+        }
 
         Flash::success( trans('admin/users/general.status.updated') );
 
@@ -523,5 +522,91 @@ class UsersController extends Controller {
 
         return $user;
     }
+
+    /**
+     * @return \Illuminate\View\View
+     */
+    public function profile()
+    {
+        $user = Auth::user();
+
+        Audit::log(Auth::user()->id, trans('general.audit-log.category-profile'), trans('general.audit-log.msg-profile-show', ['username' => $user->username]));
+
+        $page_title = trans('general.page.profile.title');
+        $page_description = trans('general.page.profile.description', ['full_name' => $user->full_name]);
+        $readOnlyIfLDAP = ('ldap' == $user->auth_type) ? 'readonly' : '';
+        $perms = $this->perm->pushCriteria(new PermissionsByNamesAscending())->all();
+
+        return view('user.profile', compact('user', 'perms', 'readOnlyIfLDAP', 'page_title', 'page_description'));
+    }
+
+    /**
+     * @param UpdateUserRequest $request
+     * @param $id
+     * @return \Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector
+     */
+    public function profileUpdate(UpdateUserRequest $request)
+    {
+        $user = Auth::user();
+
+        $this->validate($request, \app\User::getUpdateValidationRules($user->id));
+
+        Audit::log(Auth::user()->id, trans('general.audit-log.category-profile'), trans('general.audit-log.msg-profile-update', ['username' => $user->username]));
+
+        // Get all attribute from the request.
+        $attributes = $request->all();
+
+        // Set passwordChanged flag
+        $passwordChanged = false;
+
+        // Fix #17 as per @sloan58
+        // Check if the password was submitted and has changed.
+        if(!\Hash::check($attributes['password'],$user->password) && $attributes['password'] != '')
+        {
+            // Password was changed, set flag for later.
+            $passwordChanged = true;
+        }
+        else
+        {
+            // Password was not changed or was not submitted, delete attribute from array to prevent it
+            // from being set to blank.
+            unset($attributes['password']);
+            // Set flag just to be sure
+            $passwordChanged = false;
+        }
+
+        if ($user->isRoot())
+        {
+            // Prevent changes to some fields for the root user.
+            unset($attributes['username']);
+            unset($attributes['first_name']);
+            unset($attributes['last_name']);
+            unset($attributes['enabled']);
+        }
+
+        $user->update($attributes);
+        if ($passwordChanged) {
+            $this->emailPasswordChange($user);
+        }
+
+        Flash::success( trans('general.status.profile.updated') );
+
+        return redirect()->route('user.profile');
+    }
+
+    /**
+     * @param $user
+     */
+    private function emailPasswordChange($user)
+    {
+        if (Config('app.email_notifications')) {
+            // Send an email to the user to notify him of the password change.
+            Mail::send(['html' => 'emails.html.password_changed', 'text' => 'emails.text.password_changed'], ['user' => $user], function ($m) use ($user) {
+                $m->from(Config::get('mail.system_sender_address'), Config::get('mail.system_sender_label'));
+                $m->to($user->email, $user->full_name)->subject(trans('emails.password_changed.subject'));
+            });
+        }
+    }
+
 
 }

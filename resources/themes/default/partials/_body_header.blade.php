@@ -21,6 +21,10 @@
 
                 @if (Auth::check())
 
+                    @if ( config('app.context_help_area') && (isset($context_help_area)))
+                        {!! $context_help_area   !!}
+                    @endif
+
                     @if ( config('app.notification_area') )
                         <!-- Messages: style can be found in dropdown.less-->
                         <li class="dropdown messages-menu">
@@ -118,14 +122,14 @@
                         <!-- Menu Toggle Button -->
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown">
                             <!-- The user image in the navbar-->
-                            <img src="{{ asset("/bower_components/admin-lte/dist/img/generic_user_160x160.jpg") }}" class="user-image" alt="User Image"/>
+                            <img src="{{ Gravatar::get(Auth::user()->email , 'tiny') }}" class="user-image" alt="User Image"/>
                             <!-- hidden-xs hides the username on small devices so only the image appears. -->
                             <span class="hidden-xs">{{ Auth::user()->username }}</span>
                         </a>
                         <ul class="dropdown-menu">
                             <!-- The user image in the menu -->
                             <li class="user-header">
-                                <img src="{{ asset("/bower_components/admin-lte/dist/img/generic_user_160x160.jpg") }}" class="img-circle" alt="User Image" />
+                                <img src="{{ Gravatar::get(Auth::user()->email , 'medium') }}" class="img-circle" alt="User Image" />
                                 <p>
                                     {{ Auth::user()->full_name }}
                                     <small>Member since {{ Auth::user()->created_at->format("F, Y") }}</small>
@@ -152,7 +156,7 @@
 
                                 @if ( config('app.user_profile_link') )
                                     <div class="pull-left">
-                                        <a href="#" class="btn btn-default btn-flat">Profile</a>
+                                        {!! link_to_route('user.profile', 'Profile', [], ['class' => "btn btn-default btn-flat"]) !!}
                                     </div>
                                 @endif
 

@@ -35,7 +35,9 @@ Route::get( 'welcome', ['as' => 'welcome',     'uses' => 'HomeController@welcome
 // Routes in this group must be authorized.
 Route::group(['middleware' => 'authorize'], function () {
     // Application routes...
-    Route::get( 'dashboard', ['as' => 'dashboard', 'uses' => 'DashboardController@index']);
+    Route::get(   'dashboard',      ['as' => 'dashboard',          'uses' => 'DashboardController@index']);
+    Route::get(   'user/profile',   ['as' => 'user.profile',       'uses' => 'UsersController@profile']);
+    Route::patch( 'user/profile',   ['as' => 'user.profile.patch', 'uses' => 'UsersController@profileUpdate']);
 
     // Site administration section
     Route::group(['prefix' => 'admin'], function () {
@@ -130,6 +132,10 @@ Route::group(['middleware' => 'authorize'], function () {
         Route::get( 'audit/purge',                     ['as' => 'admin.audit.purge',             'uses' => 'AuditsController@purge']);
         Route::get( 'audit/{auditId}/replay',          ['as' => 'admin.audit.replay',            'uses' => 'AuditsController@replay']);
         Route::get( 'audit/{auditId}/show',            ['as' => 'admin.audit.show',              'uses' => 'AuditsController@show']);
+        // Error routes
+        Route::get( 'errors',                          ['as' => 'admin.errors.index',             'uses' => 'ErrorsController@index']);
+        Route::get( 'errors/purge',                    ['as' => 'admin.errors.purge',             'uses' => 'ErrorsController@purge']);
+        Route::get( 'errors/{errorId}/show',           ['as' => 'admin.errors.show',              'uses' => 'ErrorsController@show']);
         // Settings routes
         // TODO: Implements settings
         Route::get('settings',                         ['as' => 'admin.settings.index',          'uses' => 'TestController@test_flash_warning']);
@@ -167,7 +173,17 @@ Route::group(['middleware' => 'authorize'], function () {
             Route::get('two-b',    ['as' => 'test-menus.two-b', 'uses' => 'TestMenusController@test_menu_two_b']);
             Route::get('three',    ['as' => 'test-menus.three', 'uses' => 'TestMenusController@test_menu_three']);
         }); // End of TEST-MENU group
+        // TEST-REPORTS routes
+        Route::group(['prefix' => 'test-reports'], function () {
+            Route::get( 'users',       ['as' => 'test-reports.users',       'uses' => 'TestController@report_users']);
+            Route::post('users-data',  ['as' => 'test-reports.users-data',  'uses' => 'TestController@report_users_data']);
+            Route::get( 'routes',      ['as' => 'test-reports.routes',      'uses' => 'TestController@report_routes']);
+            Route::post('routes-data', ['as' => 'test-reports.routes-data', 'uses' => 'TestController@report_routes_data']);
+            Route::get( 'perms-and-roles-by-users',       ['as' => 'test-reports.perms-and-roles-by-users',       'uses' => 'TestController@report_perms_and_roles_by_users']);
+            Route::post('perms-and-roles-by-users-data',  ['as' => 'test-reports.perms-and-roles-by-users-data',  'uses' => 'TestController@report_perms_and_roles_by_users_data']);
+        }); // End of TEST-REPORTS group
     } // End of if DEV environment
 
     require __DIR__.'/rapyd.php';
 }); // end of AUTHORIZE middleware group
+
