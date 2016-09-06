@@ -1,28 +1,45 @@
 <?php namespace App\Libraries;
 
-class Utils {
+use App\Models\Setting;
+use App\Repositories\AuditRepository as Audit;
+use App\User;
+use Auth;
+use DateTime;
+use DateTimeZone;
+use Flash;
+use Illuminate\Support\Arr;
+
+class Utils
+{
 
 
     /**
+     * Transform the input string into function 1, 2 or 3 parameters.
+     * Used in Blade template to call the str_head, str_tail and
+     * str_head_and_tail functions.
+     *
      * @param $expression
      * @return array
      */
     public static function getParmsForStrHeadAndTails($expression)
     {
-        $parms = str_replace(['(', ')', ' '], '', $expression);
-        $parmsCnt = substr_count($parms, ',') + 1;
+        $parms = self::splitBladeParameters($expression);
+        $parmsCnt = count($parms);
         switch ($parmsCnt) {
             case 1:
-                $value = $parms;
+                $value = $parms[0];
                 $limit = 100;
                 $end = '...';
                 break;
             case 2:
-                list($value, $limit) = explode(',', $parms);
+                $value = $parms[0];
+                $limit = $parms[1];
                 $end = '...';
                 break;
             case 3:
-                list($value, $limit, $end) = explode(',', $parms);
+                $value = $parms[0];
+                $limit = $parms[1];
+                $end = $parms[2];
                 $end = str_replace(['"', "'"], '', $end);
                 break;
         }
@@ -30,47 +47,228 @@ class Utils {
     }
 
 
-    public static function str_head($value, $limit = 100, $end = '...')
+    /**
+     * Iterate through the flattened array of settings and removes
+     * all user settings. A new array is build and returned.
+     *
+     * User settings are found to start with the 'User" key followed by a number,
+     * both parts are separated by a dot ('.').
+     *
+     * @param $allSettings
+     * @return array
+     */
+    public static function FilterOutUserSettings($allSettings)
     {
-        $value_len = strlen($value);
-        $end_len = strlen($end);
-        $head_end = $limit - $end_len;
+        $allNonUserSetting = Arr::where($allSettings, function ($k) {
+            if ("User." === substr( $k, 0, 5 ) ) {
+                $kparts = explode('.', $k);
+                $user = User::ofUsername($kparts[1])->first();
+                if ($user instanceof User) {
+                    return false;
+                }
+            }
 
-        if ($limit >= $value_len)
-            return $value;
-        else
-            return substr($value, 0, $head_end) . $end;
+            return true;
+        });
+
+        return $allNonUserSetting;
     }
 
 
-    public static function str_tail($value, $limit = 100, $start = '...')
+    /**
+     * Evaluate the input variable and if the string can be converted to either
+     * a boolean, float or integer converts it and return that value.
+     * Otherwise simply return the inout variable unchanged.
+     *
+     * @param $value
+     * @return bool|float|int|misc
+     */
+    public static function correctType($value)
     {
-        $value_len = strlen($value);
-        $start_len = strlen($start);
+        try {
+            if (Str::isBoolean($value)) {
+                $value = Str::toBoolean($value);
+            } elseif (is_float($value)) {
+                $value = floatval($value);
+            } elseif (is_int($value)) {
+                $value = intval($value);
+            }
+        } catch (Exception $ex) {}
 
-        if ($limit >= $value_len)
-            return $value;
-        else
-            $tail_start = $value_len - $limit + $start_len;
-
-        return $start . substr($value, $tail_start);
+        return $value;
     }
 
 
-    public static function str_head_and_tail($value, $limit = 100, $mid = '...')
-    {
-        $value_len = strlen($value);
-        $mid_len = strlen($mid);
-        $chunk_len = ($limit - $mid_len ) / 2;
-        $tail_start = $value_len - $chunk_len;
 
-        if ($limit >= $value_len)
-            return $value;
-        else {
-            $head = substr($value, 0, $chunk_len);
-            $tail = substr($value, $tail_start);
-            return $head . $mid . $tail;
+    /**
+     * Send flash message to the users screen and logs an audit log. If an exception is provided
+     * the exception message will be included in the audit log entry.
+     *
+     * @param $auditCategory
+     * @param $msg
+     * @param $flashLevel
+     * @param null $exception
+     */
+    public static function flashAndAudit($auditCategory, $msg, $flashLevel, $exception = null)
+    {
+        $auditMsg = $msg;
+
+        // Get current user or set guest to true for unauthenticated users.
+        if ( Auth::check() ) {
+            $user       = Auth::user();
+
+            if( (isset($exception)) && (strlen($exception->getMessage()) > 0) ) {
+                $auditMsg = $msg . " Exception information: " . $exception->getMessage();
+            }
+            switch ($flashLevel) {
+                case FlashLevel::INFO:
+                    Flash::info($msg);
+                    break;
+                case FlashLevel::SUCCESS:
+                    Flash::success($msg);
+                    break;
+                case FlashLevel::WARNING:
+                    Flash::warning($msg);
+                    break;
+                // case FlashLevel::ERROR
+                default:
+                    Flash::error($msg);
+                    break;
+
+            }
+            Audit::log( $user->id, $auditCategory, $auditMsg );
         }
     }
+
+    /**
+     * Process the parameter input from a blade directive and splits it
+     * into an array of parameters.
+     *
+     * @param $expression
+     * @return array
+     */
+    public static function splitBladeParameters($expression)
+    {
+        $expCleaned = str_replace(['(', ')', ' '], '', $expression);
+        $parms = explode(',', $expCleaned);
+
+        return $parms;
+    }
+
+
+    /**
+     * @param $utcDate
+     * @return string
+     */
+//    public static function convertToLocalDateTime($utcDate)
+    public static function userTimeZone($date)
+    {
+        $time_zone = Utils::getUserOrAppOrDefaultSetting('time_zone', 'app.time_zone', 'UTC');
+        $time_format = Utils::getUserOrAppOrDefaultSetting('time_format', 'app.time_format', '24');
+
+        // Get the time zone abbreviation to display from the time zone identifier
+        $dateTime = new DateTime();
+        $dateTime->setTimeZone(new DateTimeZone($time_zone));
+        $tzAbrev = $dateTime->format('T');
+        // Convert system time to user's timezone
+        $locDate = $date;
+        $locDate->setTimeZone(new DateTimeZone($time_zone));
+
+        if ("12" == $time_format) {
+            $finalSTR = $locDate->format('Y-m-d g:i A') . " " . $tzAbrev; // output: 2011-04-26 8:45 PM EST
+        } else {
+            $finalSTR = $locDate->format('Y-m-d H:i') . " " . $tzAbrev; // output: 2011-04-26 20:45 EST
+        }
+
+        return $finalSTR;
+    }
+
+
+    /**
+     * @return mixed|null
+     */
+    public static function getUserOrAppOrDefaultSetting($userKey, $appKey = null, $default = null)
+    {
+        $setting = null;
+
+        if (null == $appKey) {
+            $appKey = $userKey;
+        }
+
+        if (\Auth::check()) {
+            $user = \Auth::user();
+            $setting = $user->settings()->get($userKey);
+        }
+        if (null == $setting) {
+            $setting = (new Setting())->get($appKey, $default);
+        }
+        return $setting;
+    }
+
+
+    public static function formatClass($class)
+    {
+        $parts = explode('\\', $class);
+
+        return sprintf('<abbr title="%s">%s</abbr>', $class, array_pop($parts));
+    }
+
+    public static function formatPath($path, $line)
+    {
+        $path = self::escapeHtml($path);
+        $file = preg_match('#[^/\\\\]*$#', $path, $file) ? $file[0] : $path;
+
+        $fileLinkFormat = ini_get('xdebug.file_link_format') ?: get_cfg_var('xdebug.file_link_format');
+
+        if ($linkFormat = $fileLinkFormat) {
+            $link = strtr(self::escapeHtml($linkFormat), array('%f' => $path, '%l' => (int) $line));
+
+            return sprintf(' in <a href="%s" title="Go to source">%s line %d</a>', $link, $file, $line);
+        }
+
+        return sprintf(' in <a title="%s line %3$d" ondblclick="var f=this.innerHTML;this.innerHTML=this.title;this.title=f;">%s line %d</a>', $path, $file, $line);
+    }
+
+    public static function formatArgs(array $args)
+    {
+        $result = array();
+        foreach ($args as $key => $item) {
+            if (is_array($item) && isset($item[0])) {
+                if ('object' === $item[0]) {
+                    $formattedValue = sprintf('<em>object</em>(%s)', self::formatClass($item[1]));
+                } elseif ('array' === $item[0]) {
+                    $formattedValue = sprintf('<em>array</em>(%s)', is_array($item[1]) ? self::formatArgs($item[1]) : $item[1]);
+                } elseif ('string' === $item[0]) {
+                    $formattedValue = sprintf("'%s'", self::escapeHtml($item[1]));
+                } elseif ('null' === $item[0]) {
+                    $formattedValue = '<em>null</em>';
+                } elseif ('boolean' === $item[0]) {
+                    $formattedValue = '<em>' . strtolower(var_export($item[1], true)) . '</em>';
+                } elseif ('resource' === $item[0]) {
+                    $formattedValue = '<em>resource</em>';
+                } elseif (isset($item[1]) && ($item[1] instanceof \Closure))  {
+                    $formattedValue = '<em>Closure</em>';
+                } elseif (isset($item[1]))  {
+                    $formattedValue = str_replace("\n", '', var_export(self::escapeHtml((string)$item[1]), true));
+                } else {
+                    $formattedValue = "";
+                }
+
+                $result[] = is_int($key) ? $formattedValue : sprintf("'%s' => %s", $key, $formattedValue);
+            }
+        }
+
+        return implode(', ', $result);
+    }
+
+    /**
+     * HTML-encodes a string.
+     */
+    public static function escapeHtml($str)
+    {
+        $charset = ini_get('default_charset') ?: 'UTF-8';
+        return htmlspecialchars($str, ENT_QUOTES | (PHP_VERSION_ID >= 50400 ? ENT_SUBSTITUTE : 0), $charset);
+    }
+
 
 }

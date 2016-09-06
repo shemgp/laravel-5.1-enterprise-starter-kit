@@ -2,19 +2,19 @@
 
 namespace App;
 
+use App\Libraries\Str;
+use App\Models\Error;
+use App\Models\Role;
+use App\Models\Setting;
+use App\Traits\UserHasPermissionsTrait;
+use Auth;
 use Illuminate\Auth\Authenticatable;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Auth\Passwords\CanResetPassword;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 use Illuminate\Contracts\Auth\CanResetPassword as CanResetPasswordContract;
-use Zizaco\Entrust\Traits\EntrustUserTrait as EntrustUserTrait;
-use App\Models\Role;
-use App\Traits\UserHasPermissionsTrait;
-use Auth;
-use Config;
+use Illuminate\Database\Eloquent\Model;
 use Sroutier\EloquentLDAP\Contracts\EloquentLDAPUserInterface;
-use Mail;
-use App\Models\Error;
+use Zizaco\Entrust\Traits\EntrustUserTrait as EntrustUserTrait;
 
 class User extends Model implements AuthenticatableContract, CanResetPasswordContract, EloquentLDAPUserInterface
 {
@@ -52,6 +52,13 @@ class User extends Model implements AuthenticatableContract, CanResetPasswordCon
      * @var array
      */
     protected $appends = ['full_name'];
+
+    /**
+     * Handle on the users settings class.
+     *
+     * @var Setting
+     */
+    protected $settings = null;
 
     /**
      * Eloquent hook to HasMany relationship between User and Audit
@@ -244,7 +251,7 @@ class User extends Model implements AuthenticatableContract, CanResetPasswordCon
         // If the auth_type is not explicitly set by the call function or module,
         // set it to the internal value.
         if (!array_key_exists('auth_type', $attributes) || ("" == ($attributes['auth_type'])) ) {
-            $attributes['auth_type'] = Config::get('eloquent-ldap.label_internal');
+            $attributes['auth_type'] = (new Setting())->get('eloquent-ldap.label_internal');
         }
 
         // Call original create method from parent
@@ -295,6 +302,26 @@ class User extends Model implements AuthenticatableContract, CanResetPasswordCon
         $this->assignPermission($attributes);
         // Force membership to group 'users'
         $this->forceRole('users');
+
+        // Process user settings
+        $this->processUserSetting('theme', $attributes);
+        $tzIdentifiers = \DateTimeZone::listIdentifiers();
+        $this->processUserSetting('time_zone', $attributes, $tzIdentifiers);
+        $this->processUserSetting('time_format', $attributes);
+        $this->processUserSetting('locale', $attributes);
+
+    }
+
+    /**
+     * Overwrite Model::delete() to clear/delete user settings first,
+     * then invoke original delete method.
+     *
+     * @throws \Exception
+     */
+    public function delete()
+    {
+        $this->settings()->forget();
+        parent::delete();
     }
 
     /**
@@ -342,6 +369,63 @@ class User extends Model implements AuthenticatableContract, CanResetPasswordCon
                       'first_name'        => 'required',
                       'last_name'         => 'required',
                     );
+    }
+
+    /**
+     * Return the existing instance of the users settings or create a new one.
+     *
+     * @return Setting
+     */
+    public function settings() {
+        if (null != $this->settings) {
+            return $this->settings;
+        } else {
+            return new Setting('User.' . $this->username);
+        }
+    }
+
+    /**
+     * Save or forget a user setting with the value from the attribute list.
+     * If an array of value is provided, the setting value in the attribute
+     * list is looked up in the array of values for the actual value to
+     * use.
+     *
+     * @param $settingKey
+     * @param array $attributes
+     * @param array $valuesArr
+     */
+    private function processUserSetting($settingKey, array $attributes, array $valuesArr = null)
+    {
+        try {
+            // Get the value from the HTTP atributes
+            $setting_selected = $attributes[$settingKey];
+            // If not null set it otherwise forget it.
+            if (!Str::isNullOrEmptyString($setting_selected)) {
+                // If a array of values was provided, look up the real value by using the index.
+                if (!is_null($valuesArr)) {
+                    $setting_value = $valuesArr[$setting_selected];
+                } else {
+                    $setting_value = $setting_selected;
+                }
+                // Set the value.
+                $this->settings()->set($settingKey, $setting_value);
+            } else {
+                $this->settings()->forget($settingKey);
+            }
+        } catch (\Exception $ex) {
+            // Setting [$settingKey] not found in list [$attributes]?!
+        }
+    }
+
+    /**
+     * Scope a query to only include users of a given username
+     *
+     * @param $query
+     * @param $string
+     * @return mixed
+     */
+    public function scopeOfUsername($query, $string) {
+        return $query->where('username', $string);
     }
 
 }

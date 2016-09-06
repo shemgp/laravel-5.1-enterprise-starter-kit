@@ -2,24 +2,26 @@
 
 use App\Http\Requests\CreateUserRequest;
 use App\Http\Requests\UpdateUserRequest;
-use App\Repositories\Criteria\User\UsersWhereFirstNameOrLastNameOrUsernameLike;
-use Illuminate\Http\Request;
-use App\Repositories\Criteria\User\UsersWithRoles;
-use App\Repositories\Criteria\User\UsersByUsernamesAscending;
+use App\Libraries\Arr;
+use App\Libraries\Str;
+use App\Models\Setting;
+use App\Repositories\AuditRepository as Audit;
 use App\Repositories\Criteria\Permission\PermissionsByNamesAscending;
 use App\Repositories\Criteria\Role\RolesByNamesAscending;
-use App\Repositories\UserRepository as User;
+use App\Repositories\Criteria\User\UsersByUsernamesAscending;
+use App\Repositories\Criteria\User\UsersWhereFirstNameOrLastNameOrUsernameLike;
+use App\Repositories\Criteria\User\UsersWithRoles;
 use App\Repositories\PermissionRepository as Permission;
 use App\Repositories\RoleRepository as Role;
-use App\Repositories\AuditRepository as Audit;
-use Illuminate\Contracts\Foundation\Application;
-use Flash;
+use App\Repositories\UserRepository as User;
 use Auth;
-use DB;
+use Flash;
+use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Http\Request;
 use Mail;
-use Config;
 
-class UsersController extends Controller {
+class UsersController extends Controller
+{
 
     /**
      * @var User
@@ -74,11 +76,20 @@ class UsersController extends Controller {
         $page_title = trans('admin/users/general.page.show.title'); // "Admin | User | Show";
         $page_description = trans('admin/users/general.page.show.description', ['full_name' => $user->full_name]); // "Displaying user";
 
-//        $roleCollection = \App\Models\Role::take(10)->get(['id', 'display_name'])->lists('display_name', 'id');
-//        $roleList = [''=>''] + $roleCollection->all();
         $perms = $this->perm->pushCriteria(new PermissionsByNamesAscending())->all();
 
-        return view('admin.users.show', compact('user', 'perms', 'page_title', 'page_description'));
+        $theme = $user->settings()->get('theme', null);
+        $time_zone = $user->settings()->get('time_zone', null);
+        $time_format = $user->settings()->get('time_format', null);
+        $locales = (new Setting())->get('app.supportedLocales');
+        $localeIdent = $user->settings()->get('locale', null);
+        if (!Str::isNullOrEmptyString($localeIdent)) {
+            $locale = $locales[$localeIdent];
+        } else {
+            $locale = "";
+        }
+
+        return view('admin.users.show', compact('user', 'perms', 'theme', 'time_zone', 'time_format', 'locale', 'page_title', 'page_description'));
     }
 
     /**
@@ -91,9 +102,6 @@ class UsersController extends Controller {
 
         $perms = $this->perm->pushCriteria(new PermissionsByNamesAscending())->all();
         $user = new \App\User();
-//        $userRoles = $user->roles;
-//        $roleCollection = \App\Models\Role::take(10)->get(['id', 'display_name'])->lists('display_name', 'id');
-//        $roleList = [''=>''] + $roleCollection->all();
 
         return view('admin.users.create', compact('user', 'perms', 'page_title', 'page_description'));
     }
@@ -144,7 +152,20 @@ class UsersController extends Controller {
         $roles = $this->role->pushCriteria(new RolesByNamesAscending())->all();
         $perms = $this->perm->pushCriteria(new PermissionsByNamesAscending())->all();
 
-        return view('admin.users.edit', compact('user', 'roles', 'perms', 'page_title', 'page_description'));
+        $themes = \Theme::getList();
+        $themes = Arr::indexToAssoc($themes, true);
+        $theme = $user->settings()->get('theme', null);
+
+        $time_zones = \DateTimeZone::listIdentifiers();
+        $time_zone = $user->settings()->get('time_zone', null);
+        $tzKey = array_search($time_zone, $time_zones);
+
+        $time_format = $user->settings()->get('time_format', null);
+
+        $locales = (new Setting())->get('app.supportedLocales');
+        $locale = $user->settings()->get('locale', null);
+
+        return view('admin.users.edit', compact('user', 'roles', 'perms', 'themes', 'theme', 'time_zones', 'tzKey', 'time_format', 'locale', 'locales', 'page_title', 'page_description'));
     }
 
     static public function ParseUpdateAuditLog($id)
@@ -267,7 +288,6 @@ class UsersController extends Controller {
 
         // Set passwordChanged flag
         $passwordChanged = false;
-
         // Fix #17 as per @sloan58
         // Check if the password was submitted and has changed.
         if(!\Hash::check($attributes['password'],$user->password) && $attributes['password'] != '')
@@ -537,7 +557,20 @@ class UsersController extends Controller {
         $readOnlyIfLDAP = ('ldap' == $user->auth_type) ? 'readonly' : '';
         $perms = $this->perm->pushCriteria(new PermissionsByNamesAscending())->all();
 
-        return view('user.profile', compact('user', 'perms', 'readOnlyIfLDAP', 'page_title', 'page_description'));
+        $themes = \Theme::getList();
+        $themes = Arr::indexToAssoc($themes, true);
+        $theme = $user->settings()->get('theme');
+
+        $time_zones = \DateTimeZone::listIdentifiers();
+        $time_zone = $user->settings()->get('time_zone');
+        $tzKey = array_search($time_zone, $time_zones);
+
+        $time_format = $user->settings()->get('time_format');
+
+        $locales = (new Setting())->get('app.supportedLocales');
+        $locale = $user->settings()->get('locale');
+
+        return view('user.profile', compact('user', 'perms', 'themes', 'theme', 'time_zones', 'tzKey', 'time_format', 'locale', 'locales', 'readOnlyIfLDAP', 'page_title', 'page_description'));
     }
 
     /**
@@ -558,7 +591,6 @@ class UsersController extends Controller {
 
         // Set passwordChanged flag
         $passwordChanged = false;
-
         // Fix #17 as per @sloan58
         // Check if the password was submitted and has changed.
         if(!\Hash::check($attributes['password'],$user->password) && $attributes['password'] != '')
@@ -574,16 +606,15 @@ class UsersController extends Controller {
             // Set flag just to be sure
             $passwordChanged = false;
         }
-
+        // Prevent changes to some fields for the root user.
         if ($user->isRoot())
         {
-            // Prevent changes to some fields for the root user.
             unset($attributes['username']);
             unset($attributes['first_name']);
             unset($attributes['last_name']);
             unset($attributes['enabled']);
         }
-
+        // Update user properties.
         $user->update($attributes);
         if ($passwordChanged) {
             $this->emailPasswordChange($user);
@@ -599,14 +630,17 @@ class UsersController extends Controller {
      */
     private function emailPasswordChange($user)
     {
-        if (Config('app.email_notifications')) {
+        $settings = new Setting();
+
+        if ($settings->get('app.email_notifications')) {
             // Send an email to the user to notify him of the password change.
-            Mail::send(['html' => 'emails.html.password_changed', 'text' => 'emails.text.password_changed'], ['user' => $user], function ($m) use ($user) {
-                $m->from(Config::get('mail.system_sender_address'), Config::get('mail.system_sender_label'));
+            Mail::send(['html' => 'emails.html.password_changed', 'text' => 'emails.text.password_changed'], ['user' => $user], function ($m) use ($user, $settings) {
+                $m->from($settings->get('mail.from.address'), $settings->get('mail.from.name'));
                 $m->to($user->email, $user->full_name)->subject(trans('emails.password_changed.subject'));
             });
         }
     }
+
 
 
 }

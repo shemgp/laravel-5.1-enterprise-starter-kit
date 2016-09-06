@@ -26,7 +26,7 @@ return [
     |
     */
 
-    'url' => 'http://localhost',
+    'url' => env('APP.URL', 'http://localhost'),
 
     /*
     |--------------------------------------------------------------------------
@@ -39,7 +39,41 @@ return [
     |
     */
 
-    'timezone' => 'UTC',
+    'timezone' => env('APP.TIMEZONE', 'UTC'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Application Time format
+    |--------------------------------------------------------------------------
+    |
+    | Should the time be displayed in 12 hour or 24 hour format?.
+    | Defaults to 24 hour format.
+    |
+    */
+
+    'time_format' => env('APP.TIME_FORMAT', '24'),
+
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Supported locale
+    |--------------------------------------------------------------------------
+    |
+    | List of supported locale for the application. Uncomment and add entries
+    | as needed.
+    |
+    */
+
+    'supportedLocales' => [
+        'en'          => 'English',
+//        'en-AU'       => 'Australian English',
+//        'en-GB'       => 'British English',
+//        'en-US'       => 'U.S. English',
+        'es'          => 'español',
+        'fr'          => 'français',
+//        'fr-CA'       => 'français canadien',
+    ],
 
     /*
     |--------------------------------------------------------------------------
@@ -52,7 +86,7 @@ return [
     |
     */
 
-    'locale' => 'en',
+    'locale' => env('APP.LOCALE', 'en'),
 
     /*
     |--------------------------------------------------------------------------
@@ -65,7 +99,7 @@ return [
     |
     */
 
-    'fallback_locale' => 'en',
+    'fallback_locale' => env('APP.FALLBACK_LOCALE', 'en'),
 
     /*
     |--------------------------------------------------------------------------
@@ -124,7 +158,7 @@ return [
     | route will be selected.
     |
     */
-    'home_route' => env('APP_HOME_ROUTE', 'welcome'),
+    'home_route' => env('APP.HOME_ROUTE', 'welcome'),
 
     /*
     |--------------------------------------------------------------------------
@@ -136,7 +170,7 @@ return [
     |
     | NOTE: The long name supports HTML markup for styling.
     */
-    'long_name' => env('APP_LONG_NAME', '<b>Laravel 5.1 </b>ESK'),
+    'long_name' => env('APP.LONG_NAME', '<b>Laravel 5.1 </b>ESK'),
 
     /*
     |--------------------------------------------------------------------------
@@ -148,7 +182,7 @@ return [
     |
     | NOTE: The short name does not support any HTML markup.
     */
-    'short_name' => env('APP_SHORT_NAME', 'LESK'),
+    'short_name' => env('APP.SHORT_NAME', 'LESK'),
 
     /*
     |--------------------------------------------------------------------------
@@ -160,7 +194,7 @@ return [
     |
     | NOTE: The tag line supports HTML markup for styling.
     */
-    'tag_line' => env('APP_TAG_LINE', 'Anything you want'),
+    'tag_line' => env('APP.TAG_LINE', 'Anything you want'),
 
     /*
     |--------------------------------------------------------------------------
@@ -173,7 +207,7 @@ return [
     |
     | NOTE: The tag line supports HTML markup for styling.
     */
-    'copyright_line' => env('APP_COPYRIGHT', '<strong>Copyright &copy; 2015 <a href="#">Company</a>.</strong> All rights reserved.'),
+    'copyright_line' => env('APP.COPYRIGHT', '<strong>Copyright &copy; 2015 <a href="#">Company</a>.</strong> All rights reserved.'),
 
     /*
     |--------------------------------------------------------------------------
@@ -183,7 +217,7 @@ return [
     | Boolean flag that allows users to register themselves, defaults to true.
     |
     */
-    'allow_registration' => env('APP_ALLOW_REGISTRATION', true),
+    'allow_registration' => env('APP.ALLOW_REGISTRATION', true),
 
     /*
     |--------------------------------------------------------------------------
@@ -193,7 +227,7 @@ return [
     | Boolean flag that shows the context help area if present, defaults to true.
     |
     */
-    'context_help_area' => env('APP_CONTEXT_HELP_AREA', true),
+    'context_help_area' => env('APP.CONTEXT_HELP_AREA', true),
 
     /*
     |--------------------------------------------------------------------------
@@ -203,7 +237,7 @@ return [
     | Boolean flag that shows the notification area boilerplate, defaults to true.
     |
     */
-    'notification_area' => env('APP_NOTIFICATION_AREA', true),
+    'notification_area' => env('APP.NOTIFICATION_AREA', true),
 
     /*
     |--------------------------------------------------------------------------
@@ -213,7 +247,7 @@ return [
     | Boolean flag that shows extended user menu boilerplate, defaults to true.
     |
     */
-    'extended_user_menu' => env('APP_EXTENDED_USER_MENU', true),
+    'extended_user_menu' => env('APP.EXTENDED_USER_MENU', true),
 
     /*
     |--------------------------------------------------------------------------
@@ -223,7 +257,7 @@ return [
     | Boolean flag that shows the user profile link boilerplate, defaults to true.
     |
     */
-    'user_profile_link' => env('APP_USER_PROFILE_LINK', true),
+    'user_profile_link' => env('APP.USER_PROFILE_LINK', true),
 
     /*
     |--------------------------------------------------------------------------
@@ -233,7 +267,7 @@ return [
     | Boolean flag that shows the right sidebar area boilerplate, defaults to true.
     |
     */
-    'right_sidebar' => env('APP_RIGHT_SIDEBAR', true),
+    'right_sidebar' => env('APP.RIGHT_SIDEBAR', true),
 
     /*
     |--------------------------------------------------------------------------
@@ -243,7 +277,7 @@ return [
     | Boolean flag that enables email notifications, defaults to false.
     |
     */
-    'email_notifications' => env('APP_EMAIL_NOTIFICATIONS_ENABLED', false),
+    'email_notifications' => env('APP.EMAIL_NOTIFICATIONS_ENABLED', false),
 
     /*
     |--------------------------------------------------------------------------
@@ -291,6 +325,7 @@ return [
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
         App\Providers\MenuBuilderServiceProvider::class,
+        App\Providers\CustomBladeServiceProvider::class,
 
         Sroutier\EloquentLDAP\Providers\EloquentLDAPServiceProvider::class,
 
@@ -306,6 +341,7 @@ return [
         Mgallegos\LaravelJqgrid\LaravelJqgridServiceProvider::class,
         Creativeorange\Gravatar\GravatarServiceProvider::class,
         Tylercd100\LERN\LERNServiceProvider::class,
+        Arcanedev\Settings\SettingsServiceProvider::class,
 
     ],
 
@@ -367,6 +403,8 @@ return [
         'GridEncoder' => Mgallegos\LaravelJqgrid\Facades\GridEncoder::class,
         'Gravatar'    => Creativeorange\Gravatar\Facades\Gravatar::class,
         'LERN'        => Tylercd100\LERN\Facades\LERN::class,
+        // Commented out to force the usage of the Setting model located at app/Models/Setting.php
+//        'Setting'     => Arcanedev\Settings\Facades\Setting::class,
 
     ],
 

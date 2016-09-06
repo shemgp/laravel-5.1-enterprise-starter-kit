@@ -1,14 +1,18 @@
 <?php namespace App\Http\Controllers;
 
+use App\Models\Setting;
 
 class HomeController extends Controller
 {
-    public function index() {
-
+    /**
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function index()
+    {
         $homeRouteName = 'welcome';
 
         try {
-            $homeCandidateName = config('app.home_route');
+            $homeCandidateName = (new Setting())->get('app.home_route');
             $homeRouteName = $homeCandidateName;
         }
         catch (\Exception $ex) { } // Eat the exception will default to the welcome route.
@@ -16,9 +20,12 @@ class HomeController extends Controller
         return \Redirect::route($homeRouteName);
     }
 
-    public function welcome() {
-
-        $page_title = "Welcome";
+    /**
+     * @return \Illuminate\Contracts\View\Factory|\Illuminate\View\View
+     */
+    public function welcome()
+    {
+        $page_title = trans('general.text.welcome');
         $page_description = "This is the welcome page";
 
         return view('welcome', compact('page_title', 'page_description'));

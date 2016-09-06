@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Libraries\Utils;
 use Closure;
 use Theme;
 
@@ -16,9 +17,11 @@ class ThemeSelector
      */
     public function handle($request, Closure $next)
     {
-        // TODO: Get theme from user settings or system setting, or env or default....
-        Theme::init(env('DEFAULT_THEME', 'default'));
+        $themeName = Utils::getUserOrAppOrDefaultSetting('theme', 'theme.default', 'default');
+
+        Theme::init( $themeName );
 
         return $next($request);
     }
+
 }
