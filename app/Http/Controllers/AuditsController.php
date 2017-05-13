@@ -1,12 +1,25 @@
 <?php namespace App\Http\Controllers;
 
-use App\Models\Setting;
 use App\Repositories\AuditRepository as Audit;
 use App\Repositories\Criteria\Audit\AuditByCreatedDateDescending;
 use App\Repositories\Criteria\Audit\AuditCreatedBefore;
 use Auth;
+use Illuminate\Contracts\Foundation\Application;
+use Setting;
 
 class AuditsController extends Controller {
+
+    /**
+     * @param Application $app
+     * @param Audit $audit
+     */
+    public function __construct(Application $app, Audit $audit)
+    {
+        parent::__construct($app, $audit);
+        // Set default crumbtrail for controller.
+        session(['crumbtrail.leaf' => 'audit']);
+    }
+
 
     /**
      * @return \Illuminate\View\View
@@ -17,7 +30,7 @@ class AuditsController extends Controller {
 
         $page_title = trans('admin/audit/general.page.index.title');
         $page_description = trans('admin/audit/general.page.index.description');
-        $purge_retention = (new Setting())->get('audit.purge_retention');
+        $purge_retention = Setting::get('audit.purge_retention');
 
         $audits = $this->audit->pushCriteria(new AuditByCreatedDateDescending())->paginate(20);
 
@@ -31,7 +44,7 @@ class AuditsController extends Controller {
     {
         Audit::log(Auth::user()->id, trans('admin/audit/general.audit-log.category'), trans('admin/audit/general.audit-log.msg-purge'));
 
-        $purge_retention = (new Setting())->get('audit.purge_retention');
+        $purge_retention = Setting::get('audit.purge_retention');
         $purge_date = (new \DateTime())->modify("- $purge_retention day");
         $auditsToDelete = $this->audit->pushCriteria(new AuditCreatedBefore($purge_date))->all();
 

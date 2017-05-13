@@ -1,6 +1,6 @@
 <?php namespace App\Libraries;
 
-use App\Models\Setting;
+use App\Libraries\Str;
 use App\Repositories\AuditRepository as Audit;
 use App\User;
 use Auth;
@@ -8,11 +8,16 @@ use DateTime;
 use DateTimeZone;
 use Flash;
 use Illuminate\Support\Arr;
+use LERN;
+use Setting;
+use App\Exceptions\JsonEncodingMaxDepthException;
+use App\Exceptions\JsonEncodingStateMismatchException;
+use App\Exceptions\JsonEncodingSyntaxErrorException;
+use App\Exceptions\JsonEncodingUnexpectedControlCharException;
+use App\Exceptions\JsonEncodingUnknownException;
 
 class Utils
 {
-
-
     /**
      * Transform the input string into function 1, 2 or 3 parameters.
      * Used in Blade template to call the str_head, str_tail and
@@ -80,7 +85,7 @@ class Utils
      * a boolean, float or integer converts it and return that value.
      * Otherwise simply return the inout variable unchanged.
      *
-     * @param $value
+     * @param $value The value to convert.
      * @return bool|float|int|misc
      */
     public static function correctType($value)
@@ -93,7 +98,7 @@ class Utils
             } elseif (is_int($value)) {
                 $value = intval($value);
             }
-        } catch (Exception $ex) {}
+        } catch (\Exception $ex) {}
 
         return $value;
     }
@@ -200,7 +205,7 @@ class Utils
             $setting = $user->settings()->get($userKey);
         }
         if (null == $setting) {
-            $setting = (new Setting())->get($appKey, $default);
+            $setting = Setting::get($appKey, $default);
         }
         return $setting;
     }
@@ -229,40 +234,6 @@ class Utils
         return sprintf(' in <a title="%s line %3$d" ondblclick="var f=this.innerHTML;this.innerHTML=this.title;this.title=f;">%s line %d</a>', $path, $file, $line);
     }
 
-    public static function formatArgs(array $args)
-    {
-        $result = array();
-        foreach ($args as $key => $item) {
-            if (is_array($item) && isset($item[0])) {
-                if ('object' === $item[0]) {
-                    $formattedValue = sprintf('<em>object</em>(%s)', self::formatClass($item[1]));
-                } elseif ('array' === $item[0]) {
-                    $formattedValue = sprintf('<em>array</em>(%s)', is_array($item[1]) ? self::formatArgs($item[1]) : $item[1]);
-                } elseif ('string' === $item[0]) {
-                    $formattedValue = sprintf("'%s'", self::escapeHtml($item[1]));
-                } elseif ('null' === $item[0]) {
-                    $formattedValue = '<em>null</em>';
-                } elseif ('boolean' === $item[0]) {
-                    $formattedValue = '<em>' . strtolower(var_export($item[1], true)) . '</em>';
-                } elseif ('resource' === $item[0]) {
-                    $formattedValue = '<em>resource</em>';
-                } elseif (isset($item[1]) && ($item[1] instanceof \Closure))  {
-                    $formattedValue = '<em>Closure</em>';
-		} elseif (isset($item[1]))  {
-                    if (isset($item[1]['exception_message']))
-                        echo $item[1]['exception_message']."\n";
-                    $formattedValue = str_replace("\n", '', var_export(self::escapeHtml((string)$item[1]), true));
-                } else {
-                    $formattedValue = "";
-                }
-
-                $result[] = is_int($key) ? $formattedValue : sprintf("'%s' => %s", $key, $formattedValue);
-            }
-        }
-
-        return implode(', ', $result);
-    }
-
     /**
      * HTML-encodes a string.
      */
@@ -272,5 +243,59 @@ class Utils
         return htmlspecialchars($str, ENT_QUOTES | (PHP_VERSION_ID >= 50400 ? ENT_SUBSTITUTE : 0), $charset);
     }
 
+
+    /**
+     * Safe JSON_ENCODE function that tries to deal with UTF8 chars or throws a valid exception.
+     *
+     * Lifted from http://stackoverflow.com/questions/10199017/how-to-solve-json-error-utf8-error-in-php-json-decode
+     * Based on: http://php.net/manual/en/function.json-last-error.php#115980
+     * @param $value
+     * @return string
+     */
+    public static function safe_json_encode($value){
+        if (version_compare(PHP_VERSION, '5.4.0') >= 0) {
+            $encoded = json_encode($value, JSON_PRETTY_PRINT);
+        } else {
+            $encoded = json_encode($value);
+        }
+        switch (json_last_error()) {
+            case JSON_ERROR_NONE:
+                return $encoded;
+            case JSON_ERROR_DEPTH:
+                throw new JsonEncodingMaxDepthException('Maximum stack depth exceeded');
+            case JSON_ERROR_STATE_MISMATCH:
+                throw new JsonEncodingStateMismatchException('Underflow or the modes mismatch');
+            case JSON_ERROR_CTRL_CHAR:
+                throw new JsonEncodingUnexpectedControlCharException('Unexpected control character found');
+            case JSON_ERROR_SYNTAX:
+                throw new JsonEncodingSyntaxErrorException('Syntax error, malformed JSON');
+            case JSON_ERROR_UTF8:
+                $clean = self::utf8ize($value);
+                return self::safe_json_encode($clean);
+            default:
+                throw new JsonEncodingUnknownException('Unknown error');
+
+        }
+    }
+
+    /**
+     * Clean the array passed in from UTF8 chars.
+     *
+     * Lifted from http://stackoverflow.com/questions/10199017/how-to-solve-json-error-utf8-error-in-php-json-decode
+     * Based on: http://php.net/manual/en/function.json-last-error.php#115980
+     *
+     * @param $mixed
+     * @return array|string
+     */
+    public static function utf8ize($mixed) {
+        if (is_array($mixed)) {
+            foreach ($mixed as $key => $value) {
+                $mixed[$key] = self::utf8ize($value);
+            }
+        } else if (is_string ($mixed)) {
+            return utf8_encode($mixed);
+        }
+        return $mixed;
+    }
 
 }

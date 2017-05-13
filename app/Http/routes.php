@@ -18,6 +18,10 @@ Route::get( 'auth/logout',              ['as' => 'logout',                  'use
 // Registration routes...
 Route::get( 'auth/register',            ['as' => 'register',                'uses' => 'Auth\AuthController@getRegister']);
 Route::post('auth/register',            ['as' => 'registerPost',            'uses' => 'Auth\AuthController@postRegister']);
+// Verify email...
+Route::get( 'auth/verify/{token}',      ['as' => 'confirm_email',           'uses' => 'Auth\AuthController@verify']);
+Route::get( 'auth/verify',              ['as' => 'confirm_emailGet',        'uses' => 'Auth\AuthController@getVerify']);
+Route::post('auth/verify',              ['as' => 'confirm_emailPost',       'uses' => 'Auth\AuthController@postVerify']);
 // Password reset link request routes...
 Route::get( 'password/email',           ['as' => 'recover_password',        'uses' => 'Auth\PasswordController@getEmail']);
 Route::post('password/email',           ['as' => 'recover_passwordPost',    'uses' => 'Auth\PasswordController@postEmail']);
@@ -84,14 +88,15 @@ Route::group(['middleware' => 'authorize'], function () {
         Route::get(   'menus/{menuId}/confirm-delete', ['as' => 'admin.menus.confirm-delete',   'uses' => 'MenusController@getModalDelete']);
         Route::get(   'menus/{menuId}/delete',         ['as' => 'admin.menus.delete',           'uses' => 'MenusController@destroy']);
         // Modules routes
-        Route::get(   'modules',                               ['as' => 'admin.modules.index',            'uses' => 'ModulesController@index']);
-        Route::get(   'modules/{slug}/initialize',             ['as' => 'admin.modules.initialize',       'uses' => 'ModulesController@initialize']);
-        Route::get(   'modules/{slug}/uninitialize',           ['as' => 'admin.modules.uninitialize',     'uses' => 'ModulesController@uninitialize']);
-        Route::get(   'modules/{slug}/enable',                 ['as' => 'admin.modules.enable',           'uses' => 'ModulesController@enable']);
-        Route::get(   'modules/{slug}/disable',                ['as' => 'admin.modules.disable',          'uses' => 'ModulesController@disable']);
-        Route::post(  'modules/enableSelected',                ['as' => 'admin.modules.enable-selected',  'uses' => 'ModulesController@enableSelected']);
-        Route::post(  'modules/disableSelected',               ['as' => 'admin.modules.disable-selected', 'uses' => 'ModulesController@disableSelected']);
-        Route::get(   'modules/optimize',                      ['as' => 'admin.modules.optimize',         'uses' => 'ModulesController@optimize']);
+        Route::get(   'modules',                               ['as' => 'admin.modules.index',                'uses' => 'ModulesController@index']);
+        Route::get(   'modules/{slug}/initialize',             ['as' => 'admin.modules.initialize',           'uses' => 'ModulesController@initialize']);
+        Route::get(   'modules/{slug}/confirm-uninitialize',   ['as' => 'admin.modules.confirm-uninitialize', 'uses' => 'ModulesController@getModalUninitialize']);
+        Route::get(   'modules/{slug}/uninitialize',           ['as' => 'admin.modules.uninitialize',         'uses' => 'ModulesController@uninitialize']);
+        Route::get(   'modules/{slug}/enable',                 ['as' => 'admin.modules.enable',               'uses' => 'ModulesController@enable']);
+        Route::get(   'modules/{slug}/disable',                ['as' => 'admin.modules.disable',              'uses' => 'ModulesController@disable']);
+        Route::post(  'modules/enableSelected',                ['as' => 'admin.modules.enable-selected',      'uses' => 'ModulesController@enableSelected']);
+        Route::post(  'modules/disableSelected',               ['as' => 'admin.modules.disable-selected',     'uses' => 'ModulesController@disableSelected']);
+        Route::get(   'modules/optimize',                      ['as' => 'admin.modules.optimize',             'uses' => 'ModulesController@optimize']);
         // Permission routes
         Route::get(   'permissions/generate',                      ['as' => 'admin.permissions.generate',         'uses' => 'PermissionsController@generate']);
         Route::post(  'permissions/enableSelected',                ['as' => 'admin.permissions.enable-selected',  'uses' => 'PermissionsController@enableSelected']);
@@ -137,7 +142,6 @@ Route::group(['middleware' => 'authorize'], function () {
         Route::get( 'errors/purge',                    ['as' => 'admin.errors.purge',             'uses' => 'ErrorsController@purge']);
         Route::get( 'errors/{errorId}/show',           ['as' => 'admin.errors.show',              'uses' => 'ErrorsController@show']);
         // Settings routes
-        // TODO: Implements settings
         Route::post(  'settings',                             ['as' => 'admin.settings.store',            'uses' => 'SettingsController@store']);
         Route::get(   'settings',                             ['as' => 'admin.settings.index',            'uses' => 'SettingsController@index']);
         Route::get(   'settings/load',                        ['as' => 'admin.settings.load',             'uses' => 'SettingsController@load']);
@@ -154,48 +158,8 @@ Route::group(['middleware' => 'authorize'], function () {
 
     }); // End of ADMIN group
 
-    // TODO: Remove this before release...
-    if ($this->app->environment('development')) {
-        // TEST-ACL routes
-        Route::group(['prefix' => 'test-acl'], function () {
-            Route::get('home',                  ['as' => 'test-acl.home',                'uses' => 'TestController@test_acl_home']);
-            Route::get('do-not-pre-load',       ['as' => 'test-acl.do-not-pre-load',     'uses' => 'TestController@test_acl_do_not_load']);
-            Route::get('no-perm',               ['as' => 'test-acl.no-perm',             'uses' => 'TestController@test_acl_no_perm']);
-            Route::get('basic-authenticated',   ['as' => 'test-acl.basic-authenticated', 'uses' => 'TestController@test_acl_basic_authenticated']);
-            Route::get('guest-only',            ['as' => 'test-acl.guest-only',          'uses' => 'TestController@test_acl_guest_only']);
-            Route::get('open-to-all',           ['as' => 'test-acl.open-to-all',         'uses' => 'TestController@test_acl_open_to_all']);
-            Route::get('admins',                ['as' => 'test-acl.admins',              'uses' => 'TestController@test_acl_admins']);
-            Route::get('power-users',           ['as' => 'test-acl.power-users',         'uses' => 'TestController@test_acl_power_users']);
-        }); // End of TEST-ACL group
+    // Uncomment to enable Rapyd datagrid.
+//    require __DIR__.'/rapyd.php';
 
-        // TEST-FLASH routes
-        Route::group(['prefix' => 'test-flash'], function () {
-            Route::get('home',    ['as' => 'test-flash.home',     'uses' => 'TestController@test_flash_home']);
-            Route::get('success', ['as' => 'test-flash.success',  'uses' => 'TestController@test_flash_success']);
-            Route::get('info',    ['as' => 'test-flash.info',     'uses' => 'TestController@test_flash_info']);
-            Route::get('warning', ['as' => 'test-flash.warning',  'uses' => 'TestController@test_flash_warning']);
-            Route::get('error',   ['as' => 'test-flash.error',    'uses' => 'TestController@test_flash_error']);
-        }); // End of TEST-FLASH group
-        // TEST-MENU routes
-        Route::group(['prefix' => 'test-menus'], function () {
-            Route::get('home',     ['as' => 'test-menus.home',  'uses' => 'TestMenusController@test_menu_home']);
-            Route::get('one',      ['as' => 'test-menus.one',   'uses' => 'TestMenusController@test_menu_one']);
-            Route::get('two',      ['as' => 'test-menus.two',   'uses' => 'TestMenusController@test_menu_two']);
-            Route::get('two-a',    ['as' => 'test-menus.two-a', 'uses' => 'TestMenusController@test_menu_two_a']);
-            Route::get('two-b',    ['as' => 'test-menus.two-b', 'uses' => 'TestMenusController@test_menu_two_b']);
-            Route::get('three',    ['as' => 'test-menus.three', 'uses' => 'TestMenusController@test_menu_three']);
-        }); // End of TEST-MENU group
-        // TEST-REPORTS routes
-        Route::group(['prefix' => 'test-reports'], function () {
-            Route::get( 'users',       ['as' => 'test-reports.users',       'uses' => 'TestController@report_users']);
-            Route::post('users-data',  ['as' => 'test-reports.users-data',  'uses' => 'TestController@report_users_data']);
-            Route::get( 'routes',      ['as' => 'test-reports.routes',      'uses' => 'TestController@report_routes']);
-            Route::post('routes-data', ['as' => 'test-reports.routes-data', 'uses' => 'TestController@report_routes_data']);
-            Route::get( 'perms-and-roles-by-users',       ['as' => 'test-reports.perms-and-roles-by-users',       'uses' => 'TestController@report_perms_and_roles_by_users']);
-            Route::post('perms-and-roles-by-users-data',  ['as' => 'test-reports.perms-and-roles-by-users-data',  'uses' => 'TestController@report_perms_and_roles_by_users_data']);
-        }); // End of TEST-REPORTS group
-    } // End of if DEV environment
-
-    require __DIR__.'/rapyd.php';
 }); // end of AUTHORIZE middleware group
 

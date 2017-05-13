@@ -75,5 +75,41 @@ return [
     | enable them.
     |
     */
-    'enable_user_on_create' => env('AUTH.ENABLE_USER_ON_CREATE', true),
+    'enable_user_on_create' => env('auth.enable_user_on_create', true),
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Email validation
+    |--------------------------------------------------------------------------
+    |
+    | Should the system send an email to a user, after the registration form is
+    | submitted, with a validation link.
+    |
+    */
+    'email_validation' => env('auth.email_validation', false),
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Enable user on validation
+    |--------------------------------------------------------------------------
+    |
+    | Should the system automatically enable users if they pass the email
+    | validation test?
+    |
+    */
+    'enable_user_on_validation' => env('auth.enable_user_on_validation', false),
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Enable remember token
+    |--------------------------------------------------------------------------
+    |
+    | Should the system allow a user to set the remember token ?
+    |
+    */
+    'enable_remember_token' => env('auth.enable_remember_token', true),
+
 ];

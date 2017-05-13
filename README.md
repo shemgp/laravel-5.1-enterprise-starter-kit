@@ -1,10 +1,10 @@
-# Laravel 5.1 - Enterprise Starter Kit (L51ESK)
+# Laravel Enterprise Starter Kit (LESK)
 
 [![Latest Version on Packagist][ico-version]][link-packagist]
 [![Software License][ico-license]](LICENSE.md)
 
 ## Description
-L51ESK, is a template project based on the [Laravel](http://laravel.com/) framework v5.1, combining a set of features 
+LESK, is a template project based on the [Laravel](http://laravel.com/) framework v5.1, combining a set of features 
 that can kick start any Web application for the Internet or on an Intranet. What makes this project unique, from what
 I have seen, are two key features: the optional Lightweight Directory Access Protocol (LDAP) & Microsoft Active 
 Directory (AD) authentication and the dynamic authorization module. But wait there is more, keep reading...
@@ -34,6 +34,8 @@ Directory (AD) authentication and the dynamic authorization module. But wait the
     - [Context sensitive help](#context-sensitive-help)
 - [Deploying to Production](#deploying-to-production)
     - [Combine and minimize](#combine-and-minimize)
+- [Tips](#tips)
+    - [Deploy to a sub-directory](#deploy-to-a-sub-directory)
 - [Troubleshooting](#troubleshooting)
 - [Change log](#change-log)
 - [Security](#security)
@@ -70,7 +72,7 @@ Directory (AD) authentication and the dynamic authorization module. But wait the
     * Allows to "replay" some user actions.
     * Allows to hook a custom data parser and blade partial to render the "replay" data.
 * Persistent settings using [arcanedev/settings](https://github.com/arcanedev/settings) configurable from the user interface.
-* Modules with [l51esk-modules](https://github.com/sroutier/l51esk-modules)
+* Modules with [lesk-modules](https://github.com/sroutier/lesk-modules)
 * Laravel [Repositories](https://github.com/Bosnadev/Repositories).
 * Flash notifications using [laracasts/flash](https://github.com/laracasts/flash).
 * Advanced datatables with [jqGrid](http://www.trirand.com/blog/) and [mgallegos/laravel-jqgrid](https://github.com/mgallegos/laravel-jqgrid).
@@ -122,18 +124,18 @@ the method that you selected to install *Node.js*.
 ## Installing
 
 ### Acquire a copy
-There are multiple ways to acquire a copy of L51ESK. You can download a ZIP archive, clone the project and finally fork 
+There are multiple ways to acquire a copy of LESK. You can download a ZIP archive, clone the project and finally fork 
 your own repository then clone it.
 
 #### Option 1: Download
 To download a ZIP archive, simply got to the main repository page at of 
-[L51ESK](https://github.com/sroutier/laravel-5.1-enterprise-starter-kit) and click on the "Download ZIP" button. 
+[LESK](https://github.com/sroutier/laravel-enterprise-starter-kit) and click on the "Download ZIP" button. 
 
 #### Option 2: Clone
 Simply clone this repository on your machine using the command:
 
 ```
-git clone https://github.com/sroutier/laravel-5.1-enterprise-starter-kit.git l51esk
+git clone https://github.com/sroutier/laravel-enterprise-starter-kit.git lesk
 ```
 
 #### Option 3: Fork & Clone
@@ -142,7 +144,7 @@ to learn how to [fork an existing repository](https://help.github.com/articles/f
 similar to this to clone your own repository:
 
 ```
-git clone https://github.com/YOUR-NAME/laravel-5.1-enterprise-starter-kit.git l51esk
+git clone https://github.com/YOUR-NAME/laravel-enterprise-starter-kit.git lesk
 ```
 
 ### Homestead (optional)
@@ -175,8 +177,8 @@ folders:
       to: /home/vagrant/projects
 
 sites:
-    - map: l51esk.dev
-      to: /home/vagrant/projects/shared/l51esk/public
+    - map: lesk.dev
+      to: /home/vagrant/projects/shared/lesk/public
 
 databases:
     - homestead
@@ -188,7 +190,7 @@ variables:
 
 Next you will have to add an entry in your host file.
 ```
-echo "192.168.10.10   l51esk-demo.dev" | sudo tee -a /etc/hosts
+echo "192.168.10.10   lesk-demo.dev" | sudo tee -a /etc/hosts
 ```
 
 Finally the last step is to provision the Homestead VM.
@@ -199,7 +201,7 @@ homestead provision
 Once provisioned, you can ssh into the running homestead VM, and change directory to the root of the project.
 ```
 homestead ssh
-cd projects/shared/l51esk
+cd projects/shared/lesk
 ```
 
 
@@ -231,6 +233,7 @@ composer install --no-dev
 packages that you have developed on and tested gets installed. Never run the *composer update* 
 command on a production server.
 
+**_NOTE:_** If the composer command fails with a memory allocation error, see the [Troubleshooting](#troubleshooting) section.
 
 #### Node.js
 Fetch all dependencies for Node.js using *npm* by using the following command:
@@ -243,19 +246,24 @@ npm install
 ### Basic configuration
 
 #### Create your *.env* file
-Create a *.env* file from the *.env.example* supplied.
+Create a *.env* file from the example supplied.
 
-For a Development environment use:
+For example in the Development environment use:
 ```
 cp .env.example-dev .env
 ```
 
-For a other environments, such as QA and Production use:
+#### Create your *.settings* file
+Create a *.settings* file from the example supplied.
+
+For example in the Development environment use:
 ```
-cp .env.example-qa .env
+cp .settings-development.example .settings-development
 ```
 
-**_NOTE:_** Do not use the environment file for the development environment in any other environment as this will cause a lot of failures in the bootstrap aand kernel part of the application due to some dependencies being dynamically injected for the development environment only.
+**_NOTE 1:_** Do not use the environment files for the development environment in any other environment as this will cause a lot of failures in the bootstrap and kernel part of the application due to some dependencies being dynamically injected for the development environment only.
+
+**_NOTE 2:_** No example is provided for the production environment as you should carefully craft your own version based on the example from QA.
 
 ### Basic configuration
 
@@ -294,8 +302,7 @@ To run the migration scripts run this command
  ./artisan migrate
  ```
  
- To seed the database run the command below, note that in the development environment a few extra user and permissions
- are created.
+ To seed the database run the command below
  ```
  ./artisan db:seed
  ```
@@ -377,10 +384,10 @@ Some important hard-set rules to note are:
     * A user cannot disable or delete his own currently logged in user.
 
 ### LDAP/AD authentication.
-To enable the optional LDAP/AD authentication module, set the *LDAP_ENABLED* variable to *true* in the *.env* file as shown 
-below:
+To enable the optional LDAP/AD authentication module, set the *eloquent-ldap.enabled* variable to *true* in the *.env*
+file as shown below:
 ````
-LDAP.ENABLED=true
+eloquent-ldap.enabled=true
 ````
 By default the LDAP/AD authentication module is set to off or false, as it requires some extra configuration on your part.
 For more information on how to configure the module, refer to documentation of the underlying package at 
@@ -430,7 +437,7 @@ To change the default theme, set the *DEFAULT_THEME* variable in the *.env* file
 ````
 THEME.DEFAULT=red
 ````
-L51ESK comes with 3 themes: default, green and red.
+LESK comes with 3 themes: default, green and red.
 Both the red and green themes inherit much of there look from the default theme which is mostly blue and based on the 
 look of the [almasaeed2010/AdminLTE](https://github.com/almasaeed2010/AdminLTE) Web template.
 For more details on how to configure and develop your own themes refer to the documentation of the 
@@ -450,6 +457,17 @@ A setting can also be manually created from the Settings Administration page if 
 names to use are the keys used by the configuration and can be located in the ```config``` directory.
 Once a setting is defined, it's value will take precedence over the value held in the configuration files or 
 environment.
+
+Additionally, settings can be encrypted, via the Web admin interface or the Artisan commands (see below). 
+The ```Setting::Get(...)``` method will automatically decrypt any encrypted value before returning it.
+
+to help manage the settings, 4 commands are available via Artisan. These 4 commands are `setting:all`, 
+`setting:forget`, `setting:get` & `setting:set`. 
+
+1. The `setting:get` command will retrieve the setting, decrypt it if required and output it. 
+1. The `setting:all` command will output all settings in raw & encrypted form, it is useful to dump all settings into a `.env` as a backup or to create another instance of the application.
+1. The `setting:set` command allows the creation of settings in encrypted or unencrypted form. If a value is not provided it will be requested. Additionally, if the value is to be encrypted, when it is requested, it will not echo on the screen.
+1. Finally, the `setting:forget` command allows the removal of any setting or group of settings.
 
 ### Audit log
 To enable the optional audit log simply set the *AUDIT_ENABLED* variable to *true* in the *.env* file as shown 
@@ -479,7 +497,7 @@ The replay action feature, as the name suggest, allows to replay or repeat an ac
 Perhaps the best and easiest way to understand how it function is to follow a concrete example. Below I will describe how the replay action is used in the case of a user edit.
 
 ##### Creating a replay-able audit log entry
-1. The operator (human) click on the link to edit the entry of a user, say ID #3, the URL would look something like this *http://l51esk/admin/users/3/edit*.
+1. The operator (human) click on the link to edit the entry of a user, say ID #3, the URL would look something like this *http://lesk/admin/users/3/edit*.
 2. The controller *UsersController* and it's function *edit* are invoked. The *edit* function prepares the data that will be displayed and edited then pass it all the the view *admin.users.edit*. Note that in the *edit* function an audit log entry is created stating that the operator initiated the edition of the user. This is just a simple audit log entry that does not save any *attributes* or sets the *replay_route*, it is there simply for audit purposes.
 3. The view is built and returned to the operator to see in his browser.
 4. The operator makes the changes that are required and submits the form.
@@ -505,7 +523,7 @@ The 5th parameter is the fully qualified function name that will be used to pars
 ##### Triggering a replay-able entry
 Following the example above, here is a description of how triggering a replay-able action functions:
 
-1. The operator (human) access the audit log page at: *http://l51esk/admin/audit*
+1. The operator (human) access the audit log page at: *http://lesk/admin/audit*
 2. Locates the replay-able entry by it's spinning recycling icon in the action column, and click on it.
 3. The *replay* function of the *AuditsController* controller is invoked. The *replay* function locates the audit log entry from the id passed in, and redirect to the Laravel route that is store in the *replay_route*. In this case it is *admin.users.replay-edit*.
 4. The *admin.users.replay-edit* route triggers the function *replayEdit* in the *UsersController* controller, as defined in the *app\Http\routes.php* file.
@@ -541,8 +559,7 @@ are available as sample:
  
 **_NOTE:_** The view is created in a migration, but will only be created (and dropped) in the development environment.
 
-**_NOTE:_** All jqGRids reports are using the base jQuery UI, except the routes report that uses the trontastic theme, 
-to show how easy it is to change jQuery UI theme.
+**_NOTE:_** All jqGRids reports are using the base jQuery UI.
 
 ### Rapyd demo
 To enable the demo mini sub-site that comes with [rapyd-laravel](https://github.com/zofe/rapyd-laravel) uncomment the 
@@ -558,8 +575,37 @@ to original package notes.
 
 ### Modules
 Small features can be grouped into modules and managed, enabled and upgraded, without impacting the entire site.
-Refer to the documentation on the [l51esk-modules](https://github.com/sroutier/l51esk-modules) and look at a 
-concrete example [Module Active Directory Inspector](https://github.com/sroutier/L51ESK-Module_ActiveDirectoryInspector) for more details.  
+
+A number of modules have already been created, here is the current list:
+
+| Name                                                                                            | Description                        |
+|-------------------------------------------------------------------------------------------------|------------------------------------|
+| [Active Directory Inspector](https://github.com/sroutier/LESK-Module_ActiveDirectoryInspector)  | A simple Active Directory browser. |
+| [Legacy Client Support][https://github.com/sroutier/LESK-Module_LegacyClientSupport]            | Provide a way to block or warn users to upgrade, based on the Web Browser used. |
+| [Reports Users](https://github.com/sroutier/LESK-Module_ReportsUsers)                           | Provides some reports on users and their permissions for admin purpose. |
+| [Reservation](https://github.com/sroutier/LESK-Module_Reservation)                              | Allows the management of reservable items. |
+| [SQL Utils](https://github.com/sroutier/LESK-Module_SQLUtils)                                   | A set of utility functions and classes to help interact with SQL Servers. |
+| [Test and demos](https://github.com/sroutier/LESK-Module_TestsAndDemos)                         | Tests and demos of the ACLs, flash levels and menus. |
+
+#### Module conventions
+In order to avoid conflicts some naming conventions are recommended below:
+
+**Module name:** The module name should be composed of the prefix "LESK-Module" followed by the module namespace as 
+defined in the ```composer.json``` of the module. Both parts should be separated by an under-score "_". For 
+example, "LESK-Module_ActiveDirectoryInspector" in the case of the "Active Directory Inspector" module.
+
+**Module tables:** Keeping in mind the limitations of the underlying RDBMS systems, in particular, Orable DB limits 
+database objects names to 30 bytes. Module table names should be composed of the prefix "mod", followed by a unique 
+and short identifier for the module for example "adinsp" and finally the name of the table. All parts should 
+be separated by an under-score "_". The total length should remain under 30 characters. For example, the 
+full table name for the module could be "mod_adinsp_users" or "mod_adinsp_groups"
+
+**Module settings:** Module settings should be composed of the lowercase slug of the module, followed by the setting 
+variable itself. All parts should be separated by a period ".". For example two settings for the "Active Directory 
+Inspector" module are "active_directory_inspector.account_suffix" and "active_directory_inspector.port".
+
+Aditional documentation can be found on the [lesk-modules](https://github.com/sroutier/lesk-modules) and look at a 
+concrete example such as the [Active Directory Inspector](https://github.com/sroutier/LESK-Module_ActiveDirectoryInspector) module for more details.  
 
 ### LERN
 To enable LERN (Laravel Exception Recorder and Notifier) set the configuration option as show below:
@@ -575,9 +621,9 @@ far back, in days, exceptions are kept when purging. By default any exception ol
 
 Context sensitive help can be enabled by setting the configuration option ```APP_CONTEXT_HELP_AREA``` to true. When context sensitive help is enabled, a question mark (?) appears in the top-right area of the Web application. The question mark is either dimmed and disabled, or lit and enabled dependint on whether context sensitive help is available or not. For example on the home page the question mark will be dimmed and disabled but on the User edit page it will be lit and enabled. When clicked on, a small box will appear with the content of the context help inside. The help box can be dismissed by clicking anywhere outside the box.
 
-To create a new context sensitive help box, simply create a blade file under the ```resources/themes/default/views/context_help/``` folder followed by a struture representing the name of your route. For example the user edit page is accessed by the ```admin.users.edit``` route so create a blade page named ```edit.blade.php``` under ```resources/themes/default/views/context_help/admin/users/``` and it will automatically be loaded and shown when a user click on the question mark (?) icon.
+To create a new context sensitive help box, simply create a blade file under the ```resources/themes/default/views/context_help/``` folder followed by a structure representing the name of your route. For example the user edit page is accessed by the ```admin.users.edit``` route so create a blade page named ```edit.blade.php``` under ```resources/themes/default/views/context_help/admin/users/``` and it will automatically be loaded and shown when a user click on the question mark (?) icon.
 
-Module can also create context sensitive help by following the same principle but they must also set the __context__ parameter when they call the parent __constructor__, here is how the (Active Directory Inspector)[https://github.com/sroutier/L51ESK-Module_ActiveDirectoryInspector] module sets it, notice the 3rd parameter in the ```parent::__construct()``` call:
+Module can also create context sensitive help by following the same principle but they must also set the __context__ parameter when they call the parent __constructor__, here is how the (Active Directory Inspector)[https://github.com/sroutier/LESK-Module_ActiveDirectoryInspector] module sets it, notice the 3rd parameter in the ```parent::__construct()``` call:
 ```
 ...
     /**
@@ -588,7 +634,6 @@ Module can also create context sensitive help by following the same principle bu
     {
         parent::__construct($app, $audit, "activedirectoryinspector");
         $this->app = $app;
-        $this->ldapConfig = $this->app['config']['activedirectoryinspector'];
     }
 ...
 ```
@@ -608,9 +653,62 @@ below:
 gulp --production
 ```
 
-## Troubleshooting
-Below are some troubleshooting tips that we have encoutered and resolved:
+## Tips
 
+### Deploy to a sub-directory
+If you plan to deploy the application in a sub-directory of a Web server, such as 
+```http://my-domain.com/awesome-app``` instead of the root of the server as ```http://awesome-app.com```, 
+you may want to tweak the ```.htaccess``` file that is provided by default under the ```public/``` directory.
+
+Below are the 2 Apache configuration files required to configure LESK to run under the directory ```/lesk-sp```.
+
+Here is a example of a modified ```.htaccess``` configuration file:
+```
+<IfModule mod_rewrite.c>
+    <IfModule mod_negotiation.c>
+        Options -MultiViews
+    </IfModule>
+
+    RewriteEngine On
+
+    # Sets the base URL for per-directory rewrites
+    RewriteBase /lesk-sp/
+
+    # Redirect Trailing Slashes...
+    RewriteRule ^(.*)/$ /$1 [L,R=301]
+
+    # Handle Front Controller...
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [L]
+</IfModule>
+```
+**_Note_** the addition of the ```RewriteBase``` directive pointing to the directory of the application.
+
+And here is the matching ```/etc/httpd/conf.d/lesk-sp.conf```:
+```
+Alias /lesk-sp /var/www/lesk-sp/public
+
+<Directory "/var/www/lesk-sp/public">
+  AllowOverride all
+  Order allow,deny
+  Allow from all
+</Directory>
+```
+
+## Troubleshooting
+Below are some troubleshooting tips that we have encountered and resolved:
+
+### Blank page or HTTP 500 server error.
+Check the laravel log file (```storage/logs/laravel.log```) file for hints. If nothing new was added to the file that is a good hint in 
+itself. Next, check the Web server error log (```/var/log/httpd/error.log```) if you see a message such as this one:
+> PHP Fatal error:  Uncaught exception 'UnexpectedValueException' with message 'The stream or 
+> file "/.../.../storage/logs/laravel.log" could not be opened: failed to open stream: Permission 
+> denied' in /.../.../vendor/monolog/monolog/src/Monolog/Handler/StreamHandler.php:97
+
+Check the file permission on the laravel log file (```storage/logs/laravel.log```) it could be that the process 
+running your Web server does not have ```write``` permission to it.
+ 
 ### Node.js
 
 #### Old version
@@ -640,6 +738,20 @@ rm -rf node_modules
 npm install -ddd
 ```
 
+### Composer fails with a memory allocation error
+Due the the size of the depandency map generated by the composer.json file, the composer command may fail with a memory allocation error such as this one:
+```
+PHP Fatal error:  Allowed memory size of 1073741824 bytes exhausted (tried to allocate 134217728 bytes) in phar:///usr/local/bin/composer/src/Composer/DependencyResolver/Solver.php on line 214
+PHP Stack trace:
+PHP   1. {main}() /usr/local/bin/composer:0
+PHP   2. require() /usr/local/bin/composer:24
+...
+```
+The solution is to temporarily remove the memory limit for the composer command with a command such as this :
+```
+php -d memory_limit=-1 /usr/local/bin/composer update tylercd100/lern
+```
+
 ## Change log
 Please see [CHANGELOG](CHANGELOG.md) for more information what has changed recently.
 
@@ -667,7 +779,7 @@ Additionally credit goes out to the authors of the various components and module
 as part of this project. 
  
 Finally I would like to point to a number of projects that served as inspiration and great source of learning material.
-These projects are similar to the L51ESK, but did not fully cover the requirements that I had. You may want to
+These projects are similar to the LESK, but did not fully cover the requirements that I had. You may want to
  have a look at them, here is the list:
  
 * [yajra/laravel-admin-template](https://github.com/yajra/laravel-admin-template) Laravel 4.2 Bootstrap Admin Starter Template, with Oracle DB Support.
@@ -677,12 +789,12 @@ These projects are similar to the L51ESK, but did not fully cover the requiremen
 * [todstoychev/Laravel5Starter](https://github.com/todstoychev/Laravel5Starter) A Laravel 5 starter project. It contains user management with roles and basic admin panel with application settings.
 
 ### License
-The L51ESK is open-sourced software licensed under the GNU General Public License Version 3 (GPLv3). 
+The LESK is open-sourced software licensed under the GNU General Public License Version 3 (GPLv3). 
 Please see [License File](LICENSE.md) for more information.
 
 
 [ico-version]: https://img.shields.io/badge/packagist-v0.1.0-orange.svg
 [ico-license]: https://img.shields.io/badge/licence-GPLv3-brightgreen.svg
 
-[link-packagist]: https://packagist.org/packages/sroutier/laravel-5.1-enterprise-starter-kit
+[link-packagist]: https://packagist.org/packages/sroutier/laravel-enterprise-starter-kit
 

@@ -2,10 +2,10 @@
 
 namespace App;
 
+use App\Models\Setting as SettingModel;
 use App\Libraries\Str;
 use App\Models\Error;
 use App\Models\Role;
-use App\Models\Setting;
 use App\Traits\UserHasPermissionsTrait;
 use Auth;
 use Illuminate\Auth\Authenticatable;
@@ -13,12 +13,18 @@ use Illuminate\Auth\Passwords\CanResetPassword;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 use Illuminate\Contracts\Auth\CanResetPassword as CanResetPasswordContract;
 use Illuminate\Database\Eloquent\Model;
+use Mail;
+use Setting;
 use Sroutier\EloquentLDAP\Contracts\EloquentLDAPUserInterface;
 use Zizaco\Entrust\Traits\EntrustUserTrait as EntrustUserTrait;
 
 class User extends Model implements AuthenticatableContract, CanResetPasswordContract, EloquentLDAPUserInterface
 {
-    use Authenticatable, CanResetPassword;
+    use Authenticatable {
+        Authenticatable::getRememberToken as authenticatableGetRememberToken;
+        Authenticatable::setRememberToken as authenticatableSetRememberToken;
+    }
+    use CanResetPassword;
     use EntrustUserTrait, UserHasPermissionsTrait {
         EntrustUserTrait::hasRole as entrustUserTraitHasRole;
         UserHasPermissionsTrait::can insteadof EntrustUserTrait;
@@ -246,12 +252,13 @@ class User extends Model implements AuthenticatableContract, CanResetPasswordCon
      * @param array $attributes
      * @return User
      */
-    public static function create(array $attributes = []) {
+    public static function create(array $attributes = [])
+    {
 
         // If the auth_type is not explicitly set by the call function or module,
         // set it to the internal value.
         if (!array_key_exists('auth_type', $attributes) || ("" == ($attributes['auth_type'])) ) {
-            $attributes['auth_type'] = (new Setting())->get('eloquent-ldap.label_internal');
+            $attributes['auth_type'] = Setting::get('eloquent-ldap.label_internal');
         }
 
         // Call original create method from parent
@@ -274,7 +281,8 @@ class User extends Model implements AuthenticatableContract, CanResetPasswordCon
      * @param array $attributes
      * @return void
      */
-    public function update(array $attributes = []) {
+    public function update(array $attributes = [])
+    {
 
         if ( array_key_exists('first_name', $attributes) ) {
             $this->first_name = $attributes['first_name'];
@@ -283,6 +291,10 @@ class User extends Model implements AuthenticatableContract, CanResetPasswordCon
             $this->last_name = $attributes['last_name'];
         }
         if ( array_key_exists('username', $attributes) ) {
+            if ( $attributes['username'] != $this->username ) {
+                // Forget settings asociated to previous username. New settings will be saved bellow.
+                Setting::forget($this->settings()->prefix());
+            }
             $this->username = $attributes['username'];
         }
         if ( array_key_exists('email', $attributes) ) {
@@ -331,7 +343,8 @@ class User extends Model implements AuthenticatableContract, CanResetPasswordCon
      * @param $name
      * @return bool
      */
-    public function isMemberOf($name) {
+    public function isMemberOf($name)
+    {
         return $this->hasRole($name, false, false);
     }
 
@@ -341,7 +354,8 @@ class User extends Model implements AuthenticatableContract, CanResetPasswordCon
      *
      * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
      */
-    public function membershipList() {
+    public function membershipList()
+    {
         return $this->roles();
     }
 
@@ -350,7 +364,8 @@ class User extends Model implements AuthenticatableContract, CanResetPasswordCon
      *
      * @return array
      */
-    public static function getCreateValidationRules() {
+    public static function getCreateValidationRules()
+    {
         return array( 'username'          => 'required|unique:users',
                       'email'             => 'required|unique:users',
                       'first_name'        => 'required',
@@ -363,7 +378,8 @@ class User extends Model implements AuthenticatableContract, CanResetPasswordCon
      *
      * @return array
      */
-    public static function getUpdateValidationRules($id) {
+    public static function getUpdateValidationRules($id)
+    {
         return array( 'username'          => 'required|unique:users,username,' . $id,
                       'email'             => 'required|unique:users,email,' . $id,
                       'first_name'        => 'required',
@@ -376,11 +392,12 @@ class User extends Model implements AuthenticatableContract, CanResetPasswordCon
      *
      * @return Setting
      */
-    public function settings() {
+    public function settings()
+    {
         if (null != $this->settings) {
             return $this->settings;
         } else {
-            return new Setting('User.' . $this->username);
+            return new SettingModel('User.' . $this->username);
         }
     }
 
@@ -400,7 +417,7 @@ class User extends Model implements AuthenticatableContract, CanResetPasswordCon
             // Get the value from the HTTP atributes
             $setting_selected = $attributes[$settingKey];
             // If not null set it otherwise forget it.
-            if (!Str::isNullOrEmptyString($setting_selected)) {
+            if ('' != trim($setting_selected)) {
                 // If a array of values was provided, look up the real value by using the index.
                 if (!is_null($valuesArr)) {
                     $setting_value = $valuesArr[$setting_selected];
@@ -424,8 +441,97 @@ class User extends Model implements AuthenticatableContract, CanResetPasswordCon
      * @param $string
      * @return mixed
      */
-    public function scopeOfUsername($query, $string) {
+    public function scopeOfUsername($query, $string)
+    {
         return $query->where('username', $string);
     }
+
+    /**
+     * Scope a query to only include users with a given confirmation_code
+     *
+     * @param $query
+     * @param $string
+     * @return mixed
+     */
+    public function scopeWhereConfirmationCode($query, $string)
+    {
+        return $query->where('confirmation_code', $string);
+    }
+
+    /**
+     * If option enabled, send an email to the user with email validation link.
+     */
+    public function emailValidation()
+    {
+        if (Setting::get('auth.email_validation')) {
+            // Set or reset validation code.
+            $confirmation_code = str_random(30);
+            $this->confirmation_code = $confirmation_code;
+            $this->save();
+            // Send email.
+            Mail::send(['html' => 'emails.html.email_validation', 'text' => 'emails.text.email_validation'], ['user' => $this], function ($message) {
+                $message->from(Setting::get('mail.system_sender_address'), Setting::get('mail.system_sender_label'));
+                $message->to($this->email, $this->full_name)->subject(trans('emails.email_validation.subject', ['first_name' => $this->first_name]));
+            });
+        }
+    }
+
+    /**
+     * If option enabled, send an email to the user to notify him of the password change
+     */
+    public function emailPasswordChange()
+    {
+        if (Setting::get('app.email_notifications')) {
+            // Send an email to the user to notify him of the password change.
+            Mail::send(['html' => 'emails.html.password_changed', 'text' => 'emails.text.password_changed'], ['user' => $this], function ($message) {
+                $message->from(Setting::get('mail.system_sender_address'), Setting::get('mail.system_sender_label'));
+                $message->to($this->email, $this->full_name)->subject(trans('emails.password_changed.subject'));
+            });
+        }
+    }
+
+
+    /**
+     * Set of method to prevent setting the remember auth token at the user model.
+     * Based on code picked up from: https://laravel.io/index.php/forum/05-21-2014-how-to-disable-remember-token
+     */
+    public function getRememberToken()
+    {
+        if ( Setting::get('auth.enable_remember_token') ) {
+            return $this->authenticatableGetRememberToken();
+        }
+        else {
+            return null; // not supported
+        }
+    }
+
+    public function setRememberToken($value)
+    {
+        if ( Setting::get('auth.enable_remember_token') ) {
+            $this->authenticatableSetRememberToken($value);
+        }
+        else {
+            // not supported
+        }
+    }
+
+    /**
+     * Overrides the method to ignore the remember token.
+     */
+    public function setAttribute($key, $value)
+    {
+        if ( Setting::get('auth.enable_remember_token') ) {
+            parent::setAttribute($key, $value);
+        }
+        else {
+            // Filter out remember token.
+            $isRememberTokenAttribute = $key == $this->getRememberTokenName();
+            if (!$isRememberTokenAttribute)
+            {
+                parent::setAttribute($key, $value);
+            }
+        }
+    }
+
 
 }

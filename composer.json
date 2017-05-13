@@ -1,5 +1,5 @@
 {
-    "name": "sroutier/laravel-5.1-enterprise-starter-kit",
+    "name": "sroutier/laravel-enterprise-starter-kit",
     "description": "A Starter project based on Laravel 5.1 with theme support, optional LDAP/AD authentication, dynamic route authorization, etc...",
     "keywords": [
       "framework",
@@ -10,7 +10,7 @@
       "LDAP",
       "Active Directory"
     ],
-    "homepage": "https://github.com/sroutier/laravel-5.1-enterprise-starter-kit",
+    "homepage": "https://github.com/sroutier/laravel-enterprise-starter-kit",
     "license": "GPL-3.0",
     "authors": [
       {
@@ -22,7 +22,7 @@
     "repositories": [
       {
         "type": "vcs",
-        "url": "https://github.com/sroutier/laravel-5.1-enterprise-starter-kit"
+        "url": "https://github.com/sroutier/laravel-enterprise-starter-kit"
       }
     ],
     "require": {
@@ -39,19 +39,20 @@
         "sroutier/eloquent-ldap": "^1.0@dev",
         "zofe/rapyd": "2.1.*",
         "baum/baum": "~1.1",
-        "sroutier/l51esk-modules": "^3.0",
-        "mgallegos/laravel-jqgrid": "1.*",
+        "sroutier/lesk-modules": "^3.0",
+        "mgallegos/laravel-jqgrid": "^1.2",
         "creativeorange/gravatar": "~1.0",
-        "tylercd100/lern": "~3.6.5",
-        "arcanedev/settings": "^1.2"
+        "arcanedev/settings": "^1.2",
+        "libern/laravel-sql-logging": "^1.0@dev",
+        "jenssegers/agent": "^2.4",
+        "tylercd100/lern": "^3.8.1"
     },
     "require-dev": {
         "fzaninotto/faker": "~1.4",
         "mockery/mockery": "0.9.*",
         "phpunit/phpunit": "~4.0",
         "phpspec/phpspec": "~2.1",
-        "jeroen-g/laravel-packager": "dev-master",
-        "libern/laravel-sql-logging": "^1.0@dev"
+        "jeroen-g/laravel-packager": "dev-master"
     },
     "autoload": {
         "classmap": [

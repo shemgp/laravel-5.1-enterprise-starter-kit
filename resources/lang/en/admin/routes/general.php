@@ -22,7 +22,7 @@ return [
         'created'                           => 'Route successfully created',
         'updated'                           => 'Route successfully updated',
         'deleted'                           => 'Route successfully deleted',
-        'loaded'                            => 'Successfully loaded :number routes from application.',
+        'synced'                            => 'Successfully loaded :nbLoaded routes from application, and deleted :nbDeleted unused routes from the database.',
         'indiv-perms-assigned'              => 'Individual routes permission assignment saved.',
         'global-perms-assigned'             => 'Selected routes permission assignment saved.',
         'no-permission-changed-detected'    => 'No permission change detected.',
@@ -79,9 +79,12 @@ return [
         'load-routes'           => 'Load routes from Laravel routes table',
         'create'                => 'Create new route',
         'enable-selected'       => 'Enable selected route',
-        'diable-selected'       => 'Disable selected route',
+        'disable-selected'      => 'Disable selected route',
         'save-perms-assignment' => 'Save permission assignments',
     ],
 
+    'placeholder'   => [
+        'select-permission' => 'Select permission',
+    ],
 
 ];

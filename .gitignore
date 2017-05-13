@@ -8,12 +8,15 @@ storage/
 # Package development #
 #######################
 /app/Modules/
+/public/vendor/
 
 # Configuration testing #
 #########################
 .env.mysql
 .env.pgsql
 .env.sqlite3
+.settings
+.settings-*
 
 # Package development #
 #######################

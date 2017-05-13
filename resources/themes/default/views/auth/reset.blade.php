@@ -4,7 +4,7 @@
     <p class="login-box-msg">Enter your email address and new password</p>
 
 
-    <form method="POST" action="/password/reset">
+    <form method="POST" action="{!! route('reset_passwordPost') !!}">
         {!! csrf_field() !!}
         <input type="hidden" name="token" value="{{ $token }}">
 
@@ -31,6 +31,8 @@
     </form>
 
     {!! link_to_route('login', 'Sign in', [], ['class' => "text-center"]) !!}<br>
-    {!! link_to_route('register', 'Register a new membership', [], ['class' => "text-center"]) !!}
+    @if (Setting::get('app.allow_registration'))
+        {!! link_to_route('register', 'Register a new membership', [], ['class' => "text-center"]) !!}
+    @endif
 
 @endsection

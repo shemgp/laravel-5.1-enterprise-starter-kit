@@ -2,9 +2,9 @@
 
 namespace App\Http\Middleware;
 
-use App\Models\Setting;
 use Closure;
 use Illuminate\Contracts\Auth\Guard;
+use Setting;
 
 class WalledGarden
 {
@@ -37,17 +37,14 @@ class WalledGarden
     {
         $exempt = false;
 
-        $settings = new Setting();
-
-        $walled_garden_enabled = $settings->getTyped('walled-garden.enabled');
-        $exemptionPath         = $settings->get('walled-garden.exemptions-path');
-        $exemptionsRegEx       = $settings->get('walled-garden.exemptions-regex');
+        $walled_garden_enabled = Setting::get('walled-garden.enabled');
+        $exemptionPath         = Setting::get('walled-garden.exemptions-path');
+        $exemptionsRegEx       = Setting::get('walled-garden.exemptions-regex');
 
         // Redirect to the login page if the user is not authenticated and the site
         // is configured as a walled garden, except if the request is going to a page
         // or route that is exempt from authentication.
-        if ( $walled_garden_enabled )
-        {
+        if ( $walled_garden_enabled ) {
             $authenticated = $this->auth->check();
             if (!$authenticated) {
                 $requestURI = $request->getUri();
@@ -68,6 +65,8 @@ class WalledGarden
                     }
                 }
                 if (!$exempt) {
+//                    $request->flashExcept(['password', 'password_confirmation']);
+                    $request->session()->reflash();
                     return redirect()->guest('auth/login');
                 }
             }

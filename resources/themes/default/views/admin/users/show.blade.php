@@ -71,12 +71,12 @@
 
                             <div class="form-group">
                                 {!! Form::label('theme', trans('admin/users/general.columns.theme')) !!}
-                                {!! Form::text('theme', $theme, ['class' => 'form-control', 'readonly']) !!}
+                                {!! Form::text('theme', $user->settings()->get('theme', null), ['class' => 'form-control', 'readonly']) !!}
                             </div>
 
                             <div class="form-group">
                                 {!! Form::label('time_zone', trans('admin/users/general.columns.time_zone')) !!}
-                                {!! Form::text('time_zone', $time_zone, ['class' => 'form-control', 'readonly']) !!}
+                                {!! Form::text('time_zone', $user->settings()->get('time_zone', null), ['class' => 'form-control', 'readonly']) !!}
                             </div>
 
                             <div class="form-group">
@@ -187,6 +187,9 @@
 @endsection
 
 @section('body_bottom')
+    <!-- Select2 4.0.0 -->
+    <script src="{{ asset ("/bower_components/admin-lte/select2/js/select2.min.js") }}" type="text/javascript"></script>
+
     <!-- Select2 js -->
     @include('partials._body_bottom_select2_js_role_search')
 @endsection

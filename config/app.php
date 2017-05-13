@@ -26,7 +26,7 @@ return [
     |
     */
 
-    'url' => env('APP.URL', 'http://localhost'),
+    'url' => env('app.url', 'http://localhost'),
 
     /*
     |--------------------------------------------------------------------------
@@ -39,7 +39,7 @@ return [
     |
     */
 
-    'timezone' => env('APP.TIMEZONE', 'UTC'),
+    'timezone' => env('app.timezone', 'UTC'),
 
     /*
     |--------------------------------------------------------------------------
@@ -51,7 +51,7 @@ return [
     |
     */
 
-    'time_format' => env('APP.TIME_FORMAT', '24'),
+    'time_format' => env('app.time_format', '24'),
 
 
 
@@ -86,7 +86,7 @@ return [
     |
     */
 
-    'locale' => env('APP.LOCALE', 'en'),
+    'locale' => env('app.locale', 'en'),
 
     /*
     |--------------------------------------------------------------------------
@@ -99,7 +99,7 @@ return [
     |
     */
 
-    'fallback_locale' => env('APP.FALLBACK_LOCALE', 'en'),
+    'fallback_locale' => env('app.fallback_locale', 'en'),
 
     /*
     |--------------------------------------------------------------------------
@@ -158,7 +158,7 @@ return [
     | route will be selected.
     |
     */
-    'home_route' => env('APP.HOME_ROUTE', 'welcome'),
+    'home_route' => env('app.home_route', 'welcome'),
 
     /*
     |--------------------------------------------------------------------------
@@ -170,7 +170,7 @@ return [
     |
     | NOTE: The long name supports HTML markup for styling.
     */
-    'long_name' => env('APP.LONG_NAME', '<b>Laravel 5.1 </b>ESK'),
+    'long_name' => env('app.long_name', '<b>Laravel</b> ESK'),
 
     /*
     |--------------------------------------------------------------------------
@@ -182,7 +182,7 @@ return [
     |
     | NOTE: The short name does not support any HTML markup.
     */
-    'short_name' => env('APP.SHORT_NAME', 'LESK'),
+    'short_name' => env('app.short_name', 'LESK'),
 
     /*
     |--------------------------------------------------------------------------
@@ -194,7 +194,7 @@ return [
     |
     | NOTE: The tag line supports HTML markup for styling.
     */
-    'tag_line' => env('APP.TAG_LINE', 'Anything you want'),
+    'tag_line' => env('app.tag_line', 'Anything you want'),
 
     /*
     |--------------------------------------------------------------------------
@@ -207,7 +207,7 @@ return [
     |
     | NOTE: The tag line supports HTML markup for styling.
     */
-    'copyright_line' => env('APP.COPYRIGHT', '<strong>Copyright &copy; 2015 <a href="#">Company</a>.</strong> All rights reserved.'),
+    'copyright_line' => env('app.copyright', '<strong>Copyright &copy; 2015 <a href="#">Company</a>.</strong> All rights reserved.'),
 
     /*
     |--------------------------------------------------------------------------
@@ -217,7 +217,7 @@ return [
     | Boolean flag that allows users to register themselves, defaults to true.
     |
     */
-    'allow_registration' => env('APP.ALLOW_REGISTRATION', true),
+    'allow_registration' => env('app.allow_registration', true),
 
     /*
     |--------------------------------------------------------------------------
@@ -227,7 +227,17 @@ return [
     | Boolean flag that shows the context help area if present, defaults to true.
     |
     */
-    'context_help_area' => env('APP.CONTEXT_HELP_AREA', true),
+    'context_help_area' => env('app.context_help_area', true),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Search box
+    |--------------------------------------------------------------------------
+    |
+    | Boolean flag that shows the Search box, defaults to true.
+    |
+    */
+    'search_box' => env('app.search_box', true),
 
     /*
     |--------------------------------------------------------------------------
@@ -237,7 +247,7 @@ return [
     | Boolean flag that shows the notification area boilerplate, defaults to true.
     |
     */
-    'notification_area' => env('APP.NOTIFICATION_AREA', true),
+    'notification_area' => env('app.notification_area', true),
 
     /*
     |--------------------------------------------------------------------------
@@ -247,7 +257,7 @@ return [
     | Boolean flag that shows extended user menu boilerplate, defaults to true.
     |
     */
-    'extended_user_menu' => env('APP.EXTENDED_USER_MENU', true),
+    'extended_user_menu' => env('app.extended_user_menu', true),
 
     /*
     |--------------------------------------------------------------------------
@@ -257,7 +267,7 @@ return [
     | Boolean flag that shows the user profile link boilerplate, defaults to true.
     |
     */
-    'user_profile_link' => env('APP.USER_PROFILE_LINK', true),
+    'user_profile_link' => env('app.user_profile_link', true),
 
     /*
     |--------------------------------------------------------------------------
@@ -267,7 +277,7 @@ return [
     | Boolean flag that shows the right sidebar area boilerplate, defaults to true.
     |
     */
-    'right_sidebar' => env('APP.RIGHT_SIDEBAR', true),
+    'right_sidebar' => env('app.right_sidebar', true),
 
     /*
     |--------------------------------------------------------------------------
@@ -277,7 +287,7 @@ return [
     | Boolean flag that enables email notifications, defaults to false.
     |
     */
-    'email_notifications' => env('APP.EMAIL_NOTIFICATIONS_ENABLED', false),
+    'email_notifications' => env('app.email_notifications_enabled', false),
 
     /*
     |--------------------------------------------------------------------------
@@ -289,7 +299,7 @@ return [
     | this array to grant expanded functionality to your applications.
     |
     */
-    'providers' => [
+    'providers' => array(
 
         /*
          * Laravel Framework Service Providers...
@@ -325,6 +335,7 @@ return [
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
         App\Providers\MenuBuilderServiceProvider::class,
+        App\Providers\SettingServiceProvider::class,
         App\Providers\CustomBladeServiceProvider::class,
 
         Sroutier\EloquentLDAP\Providers\EloquentLDAPServiceProvider::class,
@@ -335,15 +346,16 @@ return [
         Laracasts\Flash\FlashServiceProvider::class,
         YAAP\Theme\ThemeServiceProvider::class,
         Zizaco\Entrust\EntrustServiceProvider::class,
-        Zofe\Rapyd\RapydServiceProvider::class,
+//        Zofe\Rapyd\RapydServiceProvider::class,
         Baum\Providers\BaumServiceProvider::class,
-        Sroutier\L51ESKModules\ModulesServiceProvider::class,
+        Sroutier\LESKModules\ModulesServiceProvider::class,
         Mgallegos\LaravelJqgrid\LaravelJqgridServiceProvider::class,
         Creativeorange\Gravatar\GravatarServiceProvider::class,
         Tylercd100\LERN\LERNServiceProvider::class,
         Arcanedev\Settings\SettingsServiceProvider::class,
-
-    ],
+        Libern\SqlLogging\SqlLoggingServiceProvider::class,
+        Jenssegers\Agent\AgentServiceProvider::class,
+    ),
 
     /*
     |--------------------------------------------------------------------------
@@ -398,13 +410,15 @@ return [
         'Theme'       => YAAP\Theme\Facades\Theme::class,
         'Entrust'     => Zizaco\Entrust\EntrustFacade::class,
         'MenuBuilder' => App\Facades\MenuBuilderFacade::class,
-        'Module'      => Sroutier\L51ESKModules\Facades\Module::class,
+        'Module'      => Sroutier\LESKModules\Facades\Module::class,
         'GridRender'  => Mgallegos\LaravelJqgrid\Facades\GridRender::class,
         'GridEncoder' => Mgallegos\LaravelJqgrid\Facades\GridEncoder::class,
         'Gravatar'    => Creativeorange\Gravatar\Facades\Gravatar::class,
         'LERN'        => Tylercd100\LERN\Facades\LERN::class,
-        // Commented out to force the usage of the Setting model located at app/Models/Setting.php
+        // Commented out to force the usage of the custom Setting facade below.
 //        'Setting'     => Arcanedev\Settings\Facades\Setting::class,
+        'Setting'     => App\Facades\SettingFacade::class,
+        'Agent'         => Jenssegers\Agent\Facades\Agent::class,
 
     ],
 

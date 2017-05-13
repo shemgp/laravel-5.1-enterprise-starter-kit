@@ -1,8 +1,7 @@
 <?php namespace App\Libraries;
 
-use App\Models\Setting;
-use Illuminate\Support\Arr;
 use Dotenv;
+use Setting;
 
 class SettingDotEnv extends Dotenv
 {
@@ -54,29 +53,25 @@ class SettingDotEnv extends Dotenv
 
         list($key, $value) = static::normaliseEnvironmentVariable($key, $value);
 
-        $key = strtolower($key);
-
         // Filter out some Laravel system or dangerous environment variables
         // They all use the '_' as a word separator.
         $underPos = strpos($key, '_');
         if ($underPos > 0) {
             switch (substr($key, 0, $underPos)) {
-                case "app":
-                case "db":
-                case "cache":
-                case "mail":
-                case "queue":
-                case "session":
+                case "APP":
+                case "DB":
+                case "CACHE":
+                case "MAIL":
+                case "QUEUE":
+                case "SESSION":
                     return $cnt;
             }
         }
 
-        $settings = new Setting();
-
-        if ($settings->has($key)) {
+        if (Setting::has($key)) {
             return $cnt;
         } else {
-            $settings->set($key, $value);
+            Setting::set($key, $value);
             $cnt  = 1;
         }
 

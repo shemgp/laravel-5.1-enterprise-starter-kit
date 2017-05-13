@@ -4,7 +4,6 @@ use App\Http\Requests\CreateUserRequest;
 use App\Http\Requests\UpdateUserRequest;
 use App\Libraries\Arr;
 use App\Libraries\Str;
-use App\Models\Setting;
 use App\Repositories\AuditRepository as Audit;
 use App\Repositories\Criteria\Permission\PermissionsByNamesAscending;
 use App\Repositories\Criteria\Role\RolesByNamesAscending;
@@ -19,6 +18,7 @@ use Flash;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Http\Request;
 use Mail;
+use Setting;
 
 class UsersController extends Controller
 {
@@ -48,6 +48,8 @@ class UsersController extends Controller
         $this->user  = $user;
         $this->role  = $role;
         $this->perm  = $perm;
+        // Set default crumbtrail for controller.
+        session(['crumbtrail.leaf' => 'users']);
     }
 
     /**
@@ -78,10 +80,8 @@ class UsersController extends Controller
 
         $perms = $this->perm->pushCriteria(new PermissionsByNamesAscending())->all();
 
-        $theme = $user->settings()->get('theme', null);
-        $time_zone = $user->settings()->get('time_zone', null);
         $time_format = $user->settings()->get('time_format', null);
-        $locales = (new Setting())->get('app.supportedLocales');
+        $locales = Setting::get('app.supportedLocales');
         $localeIdent = $user->settings()->get('locale', null);
         if (!Str::isNullOrEmptyString($localeIdent)) {
             $locale = $locales[$localeIdent];
@@ -89,7 +89,7 @@ class UsersController extends Controller
             $locale = "";
         }
 
-        return view('admin.users.show', compact('user', 'perms', 'theme', 'time_zone', 'time_format', 'locale', 'page_title', 'page_description'));
+        return view('admin.users.show', compact('user', 'perms', 'theme', 'time_format', 'locale', 'page_title', 'page_description'));
     }
 
     /**
@@ -103,7 +103,18 @@ class UsersController extends Controller
         $perms = $this->perm->pushCriteria(new PermissionsByNamesAscending())->all();
         $user = new \App\User();
 
-        return view('admin.users.create', compact('user', 'perms', 'page_title', 'page_description'));
+        $themes = \Theme::getList();
+        $themes = Arr::indexToAssoc($themes, true);
+
+        $time_zones = \DateTimeZone::listIdentifiers();
+        $time_zone = $user->settings()->get('time_zone', null);
+        $tzKey = array_search($time_zone, $time_zones);
+
+        $time_format = $user->settings()->get('time_format', null);
+
+        $locales = Setting::get('app.supportedLocales');
+
+        return view('admin.users.create', compact('user', 'perms', 'themes', 'time_zones', 'tzKey', 'time_format', 'locales', 'page_title', 'page_description'));
     }
 
     /**
@@ -154,7 +165,6 @@ class UsersController extends Controller
 
         $themes = \Theme::getList();
         $themes = Arr::indexToAssoc($themes, true);
-        $theme = $user->settings()->get('theme', null);
 
         $time_zones = \DateTimeZone::listIdentifiers();
         $time_zone = $user->settings()->get('time_zone', null);
@@ -162,10 +172,9 @@ class UsersController extends Controller
 
         $time_format = $user->settings()->get('time_format', null);
 
-        $locales = (new Setting())->get('app.supportedLocales');
-        $locale = $user->settings()->get('locale', null);
+        $locales = Setting::get('app.supportedLocales');
 
-        return view('admin.users.edit', compact('user', 'roles', 'perms', 'themes', 'theme', 'time_zones', 'tzKey', 'time_format', 'locale', 'locales', 'page_title', 'page_description'));
+        return view('admin.users.edit', compact('user', 'roles', 'perms', 'themes', 'time_zones', 'tzKey', 'time_format', 'locales', 'page_title', 'page_description'));
     }
 
     static public function ParseUpdateAuditLog($id)
@@ -244,7 +253,7 @@ class UsersController extends Controller
         $page_title = trans('admin/users/general.page.edit.title'); // "Admin | User | Edit";
         $page_description = trans('admin/users/general.page.edit.description', ['full_name' => $user->full_name]); // "Editing user";
 
-        if (!$user->isEditable())
+        if ($user->isRoot())
         {
             abort(403);
         }
@@ -269,7 +278,19 @@ class UsersController extends Controller
         $roles = $this->role->all();
         $perms = $this->perm->all();
 
-        return view('admin.users.edit', compact('user', 'roles', 'perms', 'page_title', 'page_description'));
+        $themes = \Theme::getList();
+        $themes = Arr::indexToAssoc($themes, true);
+        $theme = $att['theme'];
+
+        $time_zones = \DateTimeZone::listIdentifiers();
+        $tzKey = $att['time_zone'];
+
+        $time_format = $att['time_format'];
+
+        $locales = Setting::get('app.supportedLocales');
+        $locale = $att['locale'];
+
+        return view('admin.users.edit', compact('user', 'roles', 'perms', 'themes', 'theme', 'time_zones', 'tzKey', 'time_format', 'locale', 'locales', 'page_title', 'page_description'));
     }
 
     /**
@@ -333,7 +354,7 @@ class UsersController extends Controller
 
         $user->update($attributes);
         if ($passwordChanged) {
-            $this->emailPasswordChange($user);
+            $user->emailPasswordChange();
         }
 
         Flash::success( trans('admin/users/general.status.updated') );
@@ -567,9 +588,11 @@ class UsersController extends Controller
 
         $time_format = $user->settings()->get('time_format');
 
-        $locales = (new Setting())->get('app.supportedLocales');
+        $locales = Setting::get('app.supportedLocales');
         $locale = $user->settings()->get('locale');
 
+        // Unset default crumbtrail set in controller ctor.
+        session()->pull('crumbtrail.leaf');
         return view('user.profile', compact('user', 'perms', 'themes', 'theme', 'time_zones', 'tzKey', 'time_format', 'locale', 'locales', 'readOnlyIfLDAP', 'page_title', 'page_description'));
     }
 
@@ -614,33 +637,31 @@ class UsersController extends Controller
             unset($attributes['last_name']);
             unset($attributes['enabled']);
         }
+
+        // Fix: Editing the profile does not allow to edit the Roles and permissions only to see them.
+        // So load the attribute array with current roles and perms to prevent them from being erased.
+        $role_ids = [];
+        foreach ($user->roles as $role) {
+            $role_ids[] = $role->id;
+        }
+        $attributes['role'] = $role_ids;
+
+        $perm_ids = [];
+        foreach ($user->permissions as $perm) {
+            $perm_ids[] = $perm->id;
+        }
+        $attributes['perms'] = $perm_ids;
+
+
         // Update user properties.
         $user->update($attributes);
         if ($passwordChanged) {
-            $this->emailPasswordChange($user);
+            $user->emailPasswordChange();
         }
 
         Flash::success( trans('general.status.profile.updated') );
 
         return redirect()->route('user.profile');
     }
-
-    /**
-     * @param $user
-     */
-    private function emailPasswordChange($user)
-    {
-        $settings = new Setting();
-
-        if ($settings->get('app.email_notifications')) {
-            // Send an email to the user to notify him of the password change.
-            Mail::send(['html' => 'emails.html.password_changed', 'text' => 'emails.text.password_changed'], ['user' => $user], function ($m) use ($user, $settings) {
-                $m->from($settings->get('mail.from.address'), $settings->get('mail.from.name'));
-                $m->to($user->email, $user->full_name)->subject(trans('emails.password_changed.subject'));
-            });
-        }
-    }
-
-
 
 }

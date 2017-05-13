@@ -3,13 +3,13 @@
 namespace App\Exceptions;
 
 use App\Libraries\Utils;
-use App\Models\Setting;
 use Auth;
 use Exception;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Input;
 use LERN;
 use Request;
+use Setting;
 use View;
 
 class Handler extends ExceptionHandler
@@ -37,20 +37,17 @@ class Handler extends ExceptionHandler
 
             //Check to see if LERN is installed otherwise you will not get an exception.
             if (app()->bound("lern")) {
-                $lernBahaviour = (new Setting())->get('lern.behaviour');
-                $lernBahaviour = strtolower($lernBahaviour);
-                switch($lernBahaviour) {
-                    case 'record':
-                        app()->make("lern")->record($e); //Record the Exception to the database
-                        break;
-                    case 'notify':
-                        $this->setLERNNotificationFormat();
-                        app()->make("lern")->notify($e); //Notify the Exception
-                        break;
-                    default:
-                        $this->setLERNNotificationFormat();
-                        app()->make("lern")->handle($e); //Record and Notify the Exception
-                        break;
+
+                $lernRecordEnabled = Setting::get('lern.enable_record');
+                $lernNotifyEnabled = Setting::get('lern.enable_notify');
+
+                if ($lernRecordEnabled) {
+                    LERN::record($e); //Record the Exception to the database
+                }
+
+                if ($lernNotifyEnabled) {
+                    $this->setLERNNotificationFormat(); // Set some formatting options
+                    LERN::notify($e); //Notify the Exception
                 }
 
             }
@@ -75,7 +72,7 @@ class Handler extends ExceptionHandler
     private function setLERNNotificationFormat()
     {
         //Change the subject
-        LERN::setSubject("[" . (new Setting())->get('lern.notify.channel') . "]: An Exception was thrown! (" . date("D M d, Y G:i", time()) . " UTC)");
+        LERN::setSubject("[" . Setting::get('lern.notify.channel') . "]: An Exception was thrown! (" . date("D M d, Y G:i", time()) . " UTC)");
 
         //Change the message body
         LERN::setMessage(function (Exception $exception) {
@@ -100,6 +97,10 @@ class Handler extends ExceptionHandler
             $exception_trace = $exception->getTrace();
             $input = Input::all();
             if (!empty($input)) {
+                if (array_has($input, 'password')) {
+                    $input['password'] = "hidden-secret";
+                    $input['password_confirmation'] = "hidden-secret";
+                }
                 $input = json_encode($input);
             } else {
                 $input = "";
@@ -110,10 +111,10 @@ class Handler extends ExceptionHandler
                 $formatted_trace = "";
 
                 if (isset($trace['function']) && isset($trace['class'])) {
-                    $formatted_trace = sprintf('at %s%s%s(%s)', Utils::formatClass($trace['class']), $trace['type'], $trace['function'], Utils::formatArgs($trace['args']));
+                    $formatted_trace = sprintf('at %s%s%s(...)', Utils::formatClass($trace['class']), $trace['type'], $trace['function']);
                 }
                 else if (isset($trace['function'])) {
-                    $formatted_trace = sprintf('at %s(%s)', $trace['function'], Utils::formatArgs($trace['args']));
+                    $formatted_trace = sprintf('at %s(...)', $trace['function']);
                 }
                 if (isset($trace['file']) && isset($trace['line'])) {
                     $formatted_trace .= Utils::formatPath($trace['file'], $trace['line']);

@@ -19,7 +19,7 @@ use Log;
 use App\Models\Menu;
 use App\Models\Route;
 
-class L51ESKSecuredMenuHandler implements MenuHandlerInterface
+class LESKSecuredMenuHandler implements MenuHandlerInterface
 {
 
     use MenuHandlerTrait {
@@ -28,14 +28,16 @@ class L51ESKSecuredMenuHandler implements MenuHandlerInterface
         getLeafMenuItem as traitGetLeafMenuItem;
     }
 
-    public $MENU_PARTIAL_VIEW   = 'partials._adminlte-menu-sidebar';
-    public $MENU_HEADER         = "";
-    public $MENU_FOOTER         = "";
-    public $MENU_ITEM_SEPARATOR = "<li role='separator' class='divider'></li>";
-    public $MENU_ITEM_INACTIVE  = "<li><a href='@URL@'><i class='@ICON@'></i>&nbsp;<span>@LABEL@</span></a></li>";
-    public $MENU_ITEM_ACTIVE    = "<li class='active'><a href='@URL@'><i class='@ICON@'></i>&nbsp;<span>@LABEL@</span><span class='sr-only'>(current)</span></a></li>";
-    public $MENU_GROUP_START    = "<li class='treeview'><a href='@URL@'><i class='@ICON@'></i><span>@LABEL@</span><i class='fa fa-angle-left pull-right'></i></a><ul class='treeview-menu'>";
-    public $MENU_GROUP_END      = "</ul></li>";
+    public $MENU_PARTIAL_VIEW       = 'partials._adminlte-menu-sidebar';
+    public $MENU_HEADER             = "";
+    public $MENU_FOOTER             = "";
+    public $MENU_ITEM_SEPARATOR     = "<li role='separator' class='divider'></li>";
+    public $MENU_ITEM_INACTIVE      = "<li><a href='@URL@'><i class='@ICON@'></i>&nbsp;<span>@LABEL@</span></a></li>";
+    public $MENU_ITEM_ACTIVE        = "<li class='active'><a href='@URL@'><i class='@ICON@'></i>&nbsp;<span>@LABEL@</span><span class='sr-only'>(current)</span></a></li>";
+    public $MENU_GROUP_START        = "<li class='treeview'><a href='@URL@'><i class='@ICON@'></i><span>@LABEL@</span><i class='fa fa-angle-left pull-right'></i></a><ul class='treeview-menu'>";
+    public $MENU_GROUP_START_OPENED = "<li class='treeview active'><a href='@URL@'><i class='@ICON@'></i><span>@LABEL@</span><i class='fa fa-angle-down pull-right'></i></a><ul class='treeview-menu menu-open'>";
+    public $MENU_GROUP_START_CLOSED = "<li class='treeview'><a href='@URL@'><i class='@ICON@'></i><span>@LABEL@</span><i class='fa fa-angle-left pull-right'></i></a><ul class='treeview-menu'>";
+    public $MENU_GROUP_END          = "</ul></li>";
 
     public $TRAIL_PARTIAL_VIEW           = 'partials._bootstrap-light-trail';
     public $TRAIL_HEADER                 = "<ol class='breadcrumb'>";
@@ -46,12 +48,12 @@ class L51ESKSecuredMenuHandler implements MenuHandlerInterface
     public $TRAIL_ITEM_INACTIVE_WITH_URL = "<li><a href='@URL@'><i class='@ICON@'></i>&nbsp;@LABEL@</a></li>";
 
 
-    public function renderMenuItem( Menu $item, $variables = [] )
+    public function renderMenuItem( Menu $item, $variables = [], $menuBranch = [] )
     {
         $itemContent = "";
 
         if ($this->currentUserIsAuthorized($item)) {
-            $itemContent = $this->traitRenderMenuItem($item, $variables);
+            $itemContent = $this->traitRenderMenuItem($item, $variables, $menuBranch);
         }
 
         return $itemContent;
@@ -103,7 +105,7 @@ class L51ESKSecuredMenuHandler implements MenuHandlerInterface
             }
             // If all checks fail.
             else {
-                Log::info("Authorization denied for menu [" . $item->name . "], guest [" . $guest . "], username [" . $username . "].");
+                Log::warning("Authorization denied for menu [" . $item->name . "], guest [" . $guest . "], username [" . $username . "].");
             }
         }
         // If item has children it may be rendered if any of the children is rendered.
@@ -113,7 +115,7 @@ class L51ESKSecuredMenuHandler implements MenuHandlerInterface
         }
         // If all checks fail.
         else {
-            Log::info("Menu has no children and/or no permission set for the requested menu [" . $item->name . "], guest [" . $guest . "], username [" . $username . "].");
+            Log::debug("Menu has no children and/or no permission set for the requested menu [" . $item->name . "], guest [" . $guest . "], username [" . $username . "].");
         }
 
         return $authorized;
@@ -134,6 +136,13 @@ class L51ESKSecuredMenuHandler implements MenuHandlerInterface
             $url = $this->traitGenerateUrl($menu);
         }
 
+        // Fix #55: Fix the url to add the basepath in case where
+        // the application is hosted in a subdirectory.
+        $base = \Request::getBasePath();
+        if ($base) {
+            $url = $base . $url;
+        }
+
         return $url;
     }
 
@@ -149,7 +158,7 @@ class L51ESKSecuredMenuHandler implements MenuHandlerInterface
         return $url;
     }
 
-    public function getLeafMenuItem( Menu $leaf = null )
+    public function getLeafMenuItem( $leaf = null )
     {
         // Get the leaf menu item from the value passed in.
         try {
@@ -164,9 +173,9 @@ class L51ESKSecuredMenuHandler implements MenuHandlerInterface
         $routeLaravel = $this->app->request->route();
         $routeAction = $routeLaravel->getAction();
         $routeName = $routeAction['as'];
-        $routeL51esk = Route::where('name', $routeName)->first();
-        if ($routeL51esk instanceof Route) {
-            $leaf = $this->menuRepository->findBy('route_id', $routeL51esk->id);
+        $routeLesk = Route::where('name', $routeName)->first();
+        if ($routeLesk instanceof Route) {
+            $leaf = $this->menuRepository->findBy('route_id', $routeLesk->id);
             if ($leaf instanceof Menu) {
                 return $leaf;
             }

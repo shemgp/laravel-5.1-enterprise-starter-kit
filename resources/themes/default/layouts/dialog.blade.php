@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>{{ config('app.short_name') }} | {{ $page_title or "Page Title" }}</title>
+    <title>{{ Setting::get('app.short_name') }} | {{ $page_title or "Page Title" }}</title>
     <!-- Tell the browser to be responsive to screen width -->
     <meta content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' name='viewport'>
     <!-- Bootstrap 3.3.4 -->
@@ -22,6 +22,10 @@
     <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
     <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
     <![endif]-->
+
+    <!-- Optional header section  -->
+    @yield('head_extra')
+
 </head>
 <body class="login-page">
 
@@ -32,7 +36,7 @@
 
 <div class="login-box">
     <div class="login-logo">
-        {!! config('app.long_name') !!} | {{ $page_title or "Page Title" }}
+        {!! Setting::get('app.long_name') !!} | {{ $page_title or "Page Title" }}
     </div><!-- /.login-logo -->
     <div class="login-box-body">
 
